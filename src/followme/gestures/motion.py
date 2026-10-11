@@ -1,11 +1,13 @@
-"""Beckon/shoo detection from repeated finger curls, pointing up/down, and the L hand shape; no camera
-or robot imports."""
+"""Beckon/shoo detection from repeated finger curls, pointing up/down (raise/lower the phone), and the
+L hand shape; no camera or robot imports."""
 import math
 
 from followme.gestures.interpreter import GestureZone
 
 CLOSER = 'closer'
 FARTHER = 'farther'
+UP = 'up'
+DOWN = 'down'
 WRIST, MIDDLE_KNUCKLE = 0, 9
 KNUCKLES = (5, 9, 13, 17)
 FINGERTIPS = (8, 12, 16, 20)
@@ -83,7 +85,7 @@ def l_shape(points, aspect=1.):
 
 
 class PointDetector:
-    """Pointing the index finger up steps 'closer', pointing down steps 'farther'.
+    """Pointing the index finger up raises the phone ('up'), pointing down lowers it ('down').
 
     The first step comes after `hold_s`, then one every `repeat_s` while the point is held, so the
     phone keeps moving until the hand drops. Gaps shorter than `grace_s` don't stop it.
@@ -102,13 +104,13 @@ class PointDetector:
         return self._last_seen is not None and now - self._last_seen <= self.grace_s
 
     def update(self, hands, now, face_center=None):
-        """Feed one frame's hands; returns 'closer', 'farther' or None."""
+        """Feed one frame's hands; returns 'up', 'down' or None."""
         valid = [hand for hand in hands if hand.pointing in ('up', 'down') and self.zone.contains(hand, face_center)]
         if not valid:
             if self._last_seen is not None and now - self._last_seen > self.grace_s:
                 self._reset()
             return None
-        direction = CLOSER if max(valid, key=lambda hand: hand.score).pointing == 'up' else FARTHER
+        direction = UP if max(valid, key=lambda hand: hand.score).pointing == 'up' else DOWN
         if direction != self._direction:
             self._reset()
             self._direction, self._since = direction, now

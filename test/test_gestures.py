@@ -2,9 +2,9 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-from followme.gestures import (CLOSER, FARTHER, FREEZE, LANDSCAPE, PARTY, PORTRAIT, RESUME, BeckonDetector,
+from followme.gestures import (CLOSER, DOWN, FARTHER, FREEZE, LANDSCAPE, PARTY, PORTRAIT, RESUME, BeckonDetector,
                                GestureInterpreter, GesturePipeline, GestureZone, HandObservation, LSignDetector,
-                               PointDetector, TwoPalmsDetector, hand_shape, l_shape, pointing)
+                               PointDetector, TwoPalmsDetector, UP, hand_shape, l_shape, pointing)
 from followme.phase5.replay import Clock
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -371,19 +371,19 @@ class PointDetectorTests(unittest.TestCase):
                 commands.append(command)
         return commands
 
-    def test_point_up_steps_closer_and_repeats_while_held(self):
+    def test_point_up_raises_and_repeats_while_held(self):
         self.assertEqual(self.feed([pointer('up')], .4), [])
-        self.assertEqual(self.feed([pointer('up')], 1.6), [CLOSER] * 4)
+        self.assertEqual(self.feed([pointer('up')], 1.6), [UP] * 4)
         self.assertEqual(self.feed([], 1), [])
 
-    def test_point_down_steps_farther(self):
-        self.assertEqual(self.feed([pointer('down')], 1), [FARTHER, FARTHER])
+    def test_point_down_lowers(self):
+        self.assertEqual(self.feed([pointer('down')], 1), [DOWN, DOWN])
 
     def test_brief_point_is_ignored(self):
         self.assertEqual(self.feed([pointer('up')], .3) + self.feed([], .5), [])
 
     def test_switching_direction_restarts_hold(self):
-        self.assertEqual(self.feed([pointer('up')], .7) + self.feed([pointer('down')], .3), [CLOSER])
+        self.assertEqual(self.feed([pointer('up')], .7) + self.feed([pointer('down')], .3), [UP])
 
     def test_hand_outside_zone_is_ignored(self):
         self.assertEqual(self.feed([pointer('up', y=.9)], 2), [])
@@ -395,7 +395,7 @@ class PointDetectorTests(unittest.TestCase):
             command = pipeline.update(hands, self.clock(), FACE)
             if command:
                 commands.append(command)
-        self.assertEqual(set(commands), {CLOSER})
+        self.assertEqual(set(commands), {UP})
 
 
 def two_palms(spread=.25):

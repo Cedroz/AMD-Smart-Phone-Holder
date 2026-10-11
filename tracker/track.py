@@ -7,7 +7,7 @@ shoulder_pan (left/right) and optionally wrist_flex (up/down) to re-center them.
 The preview also serves POST /commands and GET /status (Rotate 90 and Party mode
 buttons included). Optional --gestures
 uses the separate vision environment for closer/farther/freeze/resume commands (pointing the index
-finger up/down also moves the phone closer/farther); an L sign with the left hand rotates the phone
+finger up/down raises/lowers the phone; thumbs up resumes following afterwards); an L sign with the left hand rotates the phone
 to landscape, with the right hand back to portrait; both palms up for 2.5 s starts Party mode.
 Optional --distance maintains an approximate calibrated camera-to-user distance.
 Cover the camera with your hand for 2 s to release the phone (Grip phone puts it back).

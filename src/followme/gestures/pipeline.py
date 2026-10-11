@@ -1,5 +1,5 @@
-"""Combines held gestures (freeze/resume), the L sign (landscape/portrait), pointing up/down and
-beckon steps (closer/farther)."""
+"""Combines held gestures (freeze/resume), the L sign (landscape/portrait), pointing up/down (raise/lower
+the phone), two palms (party) and beckon steps (closer/farther)."""
 from followme.gestures.interpreter import FREEZE, GestureInterpreter, LSignDetector, TwoPalmsDetector
 from followme.gestures.motion import BeckonDetector, PointDetector
 
