@@ -352,6 +352,17 @@ def create_api(control, preview=None):
             raise HTTPException(409, str(exc))
         return {"accepted": True, "command": command}
 
+    @app.post("/find", status_code=202)
+    def find(name: str | None = Body(None, embed=True)):
+        """Go to a person: follow their enrolled face, sweeping to find them. name=null stops."""
+        try:
+            control.find(name)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc))
+        except RuntimeError as exc:
+            raise HTTPException(409, str(exc))
+        return {"accepted": True, "finding": name}
+
     @app.post("/voice", status_code=202)
     def voice(speaker: str = Body(embed=True), confidence: float = Body(0.0, embed=True)):
         """Speaker-ID results from acoustic/voice_bridge.py ("silence", "unknown" or a name)."""
@@ -1144,6 +1155,8 @@ class TrackerControl:
         # Set as soon as deactivate is submitted (from the API thread), so a running motor test stops at once.
         self.deactivate_requested = threading.Event()
         self.voice = {"speaker": None, "confidence": 0.0, "at": 0.0}  # latest result from acoustic/voice_bridge.py
+        self.find_name = None  # "Go to" person picked on the phone; beats voice until cleared
+        self.face_names = []   # enrolled faces, published for the phone's buttons
         self.reach0 = self.reach = self.requested_reach = 0.0
         self.depth = DepthFollower(args) if args.distance is not None else None
         self.last_command = None
@@ -1206,20 +1219,34 @@ class TrackerControl:
         with self.lock:
             self.voice = {"speaker": speaker, "confidence": float(confidence), "at": time.monotonic()}
 
-    def heard(self, name, within):
-        """True if the voice listener identified `name` in the last `within` seconds."""
+    def find(self, name):
+        """Phone "Go to": look for and follow `name`; None goes back to normal tracking."""
+        with self.lock:
+            if name is not None and name not in self.face_names:
+                raise ValueError(f"{name!r} has no enrolled face")
+            if name is not None and self.deactivated:
+                raise RuntimeError("the arm is deactivated")
+            self.find_name = name
+
+    def heard(self, names, within):
+        """Which of `names` the voice listener identified in the last `within` seconds, else None.
+
+        Only the latest result counts, so when a second person starts talking, attention moves to them.
+        """
         with self.lock:
             v = self.voice
-            return v["speaker"] == name and time.monotonic() - v["at"] <= within
+            fresh = time.monotonic() - v["at"] <= within
+            return v["speaker"] if fresh and v["speaker"] in names else None
 
     def publish(self, **fields):
         with self.lock:
             self.status.update(fields)
             heard = self.voice["speaker"]
-            self.status.update(voice={"target": getattr(self.args, "voice", None), "speaker": heard,
+            self.status.update(voice={"targets": getattr(self.args, "voice", None) or [], "speaker": heard,
                                       "confidence": self.voice["confidence"],
                                       "age": round(time.monotonic() - self.voice["at"], 1) if heard else None,
                                       "hold": getattr(self.args, "voice_hold", None)})
+            self.status.update(finding=self.find_name, faces=list(self.face_names))
             self.status.update(frozen=self.frozen, deactivated=self.deactivated, dry_run=self.args.dry_run,
                 target_distance=self.args.distance, estimated_distance=self.depth.distance if self.depth else None,
                 reach=self.reach, requested_reach=None if self.depth else self.requested_reach,
@@ -1236,9 +1263,10 @@ class TrackerControl:
 
 
 def start_voice(args):
-    """Face recognizer for the voice target, plus acoustic/voice_bridge.py in the speakerid env.
+    """Face recognizer for the voice targets, plus acoustic/voice_bridge.py in the speakerid env.
 
-    The bridge listens all the time and POSTs each speaker-ID result to this tracker's /voice.
+    The bridge listens all the time and POSTs each speaker-ID result to this tracker's /voice. Names
+    whose face isn't enrolled yet are allowed: they can be enrolled from the tracker page while it runs.
     """
     try:
         from .faces import FaceRecognizer
@@ -1247,8 +1275,10 @@ def start_voice(args):
     if not args.preview_port:
         raise SystemExit("--voice needs the tracker API: don't pass --preview-port 0")
     recognizer = FaceRecognizer(args.face_db, args.face_threshold)
-    if args.voice not in recognizer.names:
-        raise SystemExit(f"--voice {args.voice}: that face is not enrolled in {args.face_db}; enroll it first")
+    missing = [name for name in args.voice if name not in recognizer.names]
+    if missing:
+        log.warning(f"Voice: no enrolled face for {', '.join(missing)}; hearing them won't move the arm until "
+                    f"their face is enrolled (Enroll face on the tracker page)")
     command = [args.voice_python, "-u", str(ROOT / "acoustic" / "voice_bridge.py"),
                "--tracker-url", f"http://127.0.0.1:{args.preview_port}"]
     if args.voice_local_mic is not None:
@@ -1258,7 +1288,7 @@ def start_voice(args):
                                 stdout=open(log_path, "w"), stderr=subprocess.STDOUT)
     source = f"microphone {args.voice_local_mic} on this machine" if args.voice_local_mic is not None \
         else "the laptop mic (run acoustic/mac_mic_sender.py and the SSH tunnel)"
-    log.info(f"Voice: listening for {args.voice} via {source}; log in {log_path}")
+    log.info(f"Voice: listening for {', '.join(args.voice)} via {source}; log in {log_path}")
     return recognizer, listener
 
 
@@ -1375,6 +1405,17 @@ def run(args):
         recognizer = voice_listener = None
         if args.voice:
             recognizer, voice_listener = start_voice(args)
+        else:
+            try:
+                try:
+                    from .faces import FaceRecognizer
+                except ImportError:
+                    from faces import FaceRecognizer
+                recognizer = FaceRecognizer(args.face_db, args.face_threshold)
+            except Exception as e:  # models or database missing: everything else still works
+                log.warning(f"Face recognition unavailable ({e}); the phone's Go to buttons are disabled")
+        if recognizer is not None and control.enrollment.recognizer is None:
+            control.enrollment.recognizer = recognizer  # faces enrolled from the page count at once
         preview = Preview(args.preview_port, control) if args.preview_port else None
         if sys.stdin.isatty():
             def read_terminal():
@@ -1632,7 +1673,8 @@ def run(args):
         frames, t_fps, fps, cam_fps = 0, time.time(), 0.0, 0.0
         t_end = time.time() + args.max_seconds if args.max_seconds else None
 
-        voice_was_on, voice_seen, search_dir = False, 0.0, 1.0
+        voice_was = find_was = seek_was = None
+        seek_seen, search_dir, search_level = 0.0, 1.0, 0
         last_control = time.monotonic()
         while not stop.is_set() and (t_end is None or time.time() < t_end):
             # Someone may start another program on the arm while we run; fighting it garbles the bus
@@ -1663,18 +1705,40 @@ def run(args):
                                    else cv2.ROTATE_90_COUNTERCLOCKWISE)
             h, w = frame.shape[:2]
 
-            # Voice: while the target's voice was heard recently, follow only their face; if it isn't in
-            # view, sweep the base to look for them.
-            voice_on = bool(recognizer) and control.heard(args.voice, args.voice_hold)
-            if voice_on != voice_was_on:
-                smoothed, voice_was_on = None, voice_on  # switch people immediately, not via max_jump
-                log.info(f"Voice: heard {args.voice}, looking for them" if voice_on else "Voice: back to normal tracking")
+            # Voice: while one of the --voice people was heard recently, follow only that person's face;
+            # if it isn't in view, sweep the base to look for them.
+            voice_name = control.heard(args.voice, args.voice_hold) if recognizer and args.voice else None
+            voice_face_known = voice_name is not None and voice_name in recognizer.names
+            if recognizer is not None:
+                control.face_names = sorted(set(map(str, recognizer.names)))
+            # A name picked on the phone wins over voice until it is cleared.
+            find_name = control.find_name if recognizer else None
+            if find_name != find_was:
+                if find_name:
+                    control.frozen = False  # picking someone hands control back from the D-pad
+                    log.info(f"Go to {find_name}: looking for them")
+                else:
+                    log.info("Go to: cleared")
+                find_was = find_name
+            seek_name = find_name or (voice_name if voice_face_known else None)
+            seek_on = seek_name is not None and seek_name in recognizer.names
+            if seek_name != seek_was:
+                smoothed, seek_seen = None, 0.0  # switch people immediately, not via max_jump
+                seek_was = seek_name
+            if voice_name != voice_was:
+                if voice_name is None:
+                    log.info("Voice: back to normal tracking")
+                elif voice_face_known:
+                    log.info(f"Voice: heard {voice_name}, looking for them")
+                else:
+                    log.info(f"Voice: heard {voice_name}, but their face isn't enrolled; tracking as usual")
+                voice_was = voice_name
             if enrolling:
                 boxes = []
-            elif voice_on:
-                boxes = [b for b in recognizer.detect(frame) if b[4].startswith(f"face:{args.voice} ")]
+            elif seek_on:
+                boxes = [b for b in recognizer.detect(frame) if b[4].startswith(f"face:{seek_name} ")]
                 if boxes:
-                    voice_seen = time.time()
+                    seek_seen = time.time()
             else:
                 boxes = detector.detect(frame)
             face_labels = control.enrollment.labels(frame, boxes) if preview and not enrolling else {}
@@ -1775,19 +1839,45 @@ def run(args):
                 motion_blocker = "frozen"
             elif not held:
                 motion_blocker = "phone released"
-            elif target is None and voice_on and time.time() - voice_seen > 0.7:
-                motion_blocker = f"searching for {args.voice}"
+            elif target is None and seek_on and time.time() - seek_seen > 0.7:
+                motion_blocker = f"searching for {seek_name}"
             elif target is None:
                 motion_blocker = "target unavailable"
             elif freeze:
                 motion_blocker = "pull detected"
-            if robot and motion_blocker == f"searching for {args.voice}":
-                new = pan_goal + search_dir * args.search_speed * min(dt, 0.1)
+            if robot and seek_on and motion_blocker == f"searching for {seek_name}":
+                step_dt = min(dt, 0.1)
+                new = pan_goal + search_dir * args.search_speed * step_dt
                 if not pan_home - args.pan_limit <= new <= pan_home + args.pan_limit:
-                    search_dir = -search_dir  # sweep back the other way at the pan limit
+                    search_dir = -search_dir  # sweep back the other way at the pan limit...
+                    search_level = (search_level + 1) % len(args.search_heights)  # ...at the next height
                     new = float(np.clip(new, pan_home - args.pan_limit, pan_home + args.pan_limit))
                 pan_goal = float(new)
-                robot.send_action({f"{PAN}.pos": pan_goal})
+                action = {f"{PAN}.pos": pan_goal}
+                if hik:
+                    # Search at face height: ease the phone to this pass's height (same IK checks as
+                    # tracking) and level the camera, so faces at that height are in frame.
+                    z_target = float(np.clip(hik.z0 + args.search_heights[search_level],
+                                             hik.z0 - args.height_down, hik.z0 + args.height_up))
+                    dz = float(np.clip(z_target - z_goal, -args.search_lift_rate * step_dt, args.search_lift_rate * step_dt))
+                    for scale in (1.0, 0.5, 0.25):
+                        if abs(dz) < 1e-4:
+                            break
+                        q, pos_err, ang_err = hik.solve(z_goal + dz * scale, control.reach)
+                        if valid_ik(hik, q, pos_err, ang_err):
+                            hik.q, z_goal = q, z_goal + dz * scale
+                            break
+                    pitch = hik.camera_pitch(tilt_offset, args.camera_pitch_offset)
+                    slope = hik.camera_pitch(tilt_offset + 1.0, args.camera_pitch_offset) - pitch  # deg pitch per deg tilt
+                    if abs(slope) > 0.1:
+                        want = tilt_offset + (args.search_pitch - pitch) / slope
+                        tilt_offset = float(np.clip(tilt_offset + np.clip(want - tilt_offset, -20 * step_dt, 20 * step_dt),
+                                                    -args.tilt_limit, args.tilt_limit))
+                    action.update(plane_action(hik.q, tilt_offset))
+                elif args.tilt:
+                    tilt_goal = float(tilt_goal + np.clip(tilt_home - tilt_goal, -20 * step_dt, 20 * step_dt))
+                    action[f"{TILT}.pos"] = tilt_goal
+                robot.send_action(action)
             if robot and motion_blocker is None:
                 action = {}
                 if abs(ex) > args.deadband:
@@ -1861,6 +1951,8 @@ def run(args):
             control.publish(mode="deactivated" if control.deactivated else
                             "frozen" if control.frozen else ("tracking" if held else "released"),
                 held=held, target_visible=target is not None, motion_blocker=motion_blocker,
+                voice_following=voice_name, voice_face_missing=voice_name is not None and not voice_face_known,
+                seeking=seek_name if seek_on else None,
                 height_enabled=args.height, height=z_goal if hik else None,
                 camera_pitch=hik.camera_pitch(tilt_offset, args.camera_pitch_offset) if hik and args.height else None,
                 at_height_limit=bool(hik and args.height and (
@@ -1945,16 +2037,21 @@ def main():
     p.add_argument("--follow-face", help="follow only this enrolled name using YuNet + SFace")
     p.add_argument("--face-db", default=os.path.join(MODELS_DIR, "faces.npz"), help="enrolled face database")
     p.add_argument("--face-threshold", type=float, default=0.45, help="minimum face cosine similarity")
-    p.add_argument("--voice", metavar="NAME",
-                   help="listen all the time; while NAME's voice is heard, follow NAME's enrolled face and "
-                        "sweep the base to find them if they're out of view")
+    p.add_argument("--voice", metavar="NAME", nargs="+",
+                   help="listen all the time; while one of these people is heard, follow their enrolled face and "
+                        "sweep the base to find them if they're out of view (e.g. --voice Arnav Jaisree)")
     p.add_argument("--voice-python", default="/home/aup/miniforge3/envs/speakerid/bin/python",
                    help="Python of the speaker-ID environment (acoustic/README.md)")
     p.add_argument("--voice-local-mic", type=int, metavar="DEVICE",
                    help="use this microphone on the tracker machine instead of the forwarded laptop mic")
     p.add_argument("--voice-hold", type=float, default=4.0,
-                   help="keep looking for NAME this many seconds after their voice was last identified")
-    p.add_argument("--search-speed", type=float, default=15.0, help="degrees per second while sweeping to find NAME")
+                   help="keep looking for a person this many seconds after their voice was last identified")
+    p.add_argument("--search-speed", type=float, default=15.0, help="degrees per second while sweeping to find someone")
+    p.add_argument("--search-heights", type=float, nargs="+", default=[0.0, 0.08], metavar="M",
+                   help="phone heights (metres above the start pose) to search at, one per sweep, in turn")
+    p.add_argument("--search-pitch", type=float, default=0.0,
+                   help="camera pitch while searching, degrees (0 = level, positive = up)")
+    p.add_argument("--search-lift-rate", type=float, default=0.04, help="metres per second to reach a search height")
     p.add_argument("--port", help="follower arm serial port; auto-detected if omitted")
     p.add_argument("--dry-run", action="store_true", help="camera + detection only, never touch the motors")
     p.add_argument("--test-pan", action="store_true", help="move the base 10 deg and back to check direction")

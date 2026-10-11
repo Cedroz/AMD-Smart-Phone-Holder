@@ -252,6 +252,29 @@
   .move-info .hint { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
   .move.disabled .dpad { opacity: .45; }
 
+  .people { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .person {
+    position: relative; display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 12px;
+    border-radius: 16px; background: var(--surface); border: 1.5px solid var(--border); box-shadow: var(--shadow);
+    font-size: 16px; font-weight: 700; text-align: left;
+    transition: transform .08s ease, background .2s, border-color .2s, color .2s;
+  }
+  .person:active { transform: scale(.97); }
+  .person:focus-visible { outline: 3px solid var(--ambient); outline-offset: 2px; }
+  .person .avatar {
+    width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    background: var(--ambient-soft); color: var(--ambient); font-size: 15px; font-weight: 800;
+  }
+  .person.on { background: var(--ambient); border-color: var(--ambient); color: var(--on-accent); }
+  .person.on .avatar { background: color-mix(in srgb, var(--on-accent) 22%, transparent); color: var(--on-accent); }
+  .person.found::after {
+    content: ""; position: absolute; top: 8px; right: 8px; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--ok); box-shadow: 0 0 0 2px var(--surface);
+  }
+  .people-hint { font-size: 13px; color: var(--muted); margin: -8px 4px 0; min-height: 1.2em; }
+  .people-hint.on { color: var(--ambient); font-weight: 600; }
+  body.deactivated .people { opacity: .45; }
+
   .busy { pointer-events: none; }
   .btn.pending::after, .btn-off.pending::after {
     content: ""; position: absolute; inset: 0; border-radius: inherit;
@@ -304,6 +327,10 @@
   </section>
 
   <div class="spacer"></div>
+
+  <div class="section-title">Go to</div>
+  <section class="people" id="people" aria-label="Go to a person"></section>
+  <div class="people-hint" id="peopleHint" aria-live="polite">Checking the tracker…</div>
 
   <div class="section-title">Mode</div>
   <section class="modes">
@@ -512,20 +539,84 @@
 
   function renderVoice() {
     const v = tracker.reachable ? tracker.voice : null;
+    const targets = v ? (v.targets || (v.target ? [v.target] : [])) : [];
     const line = document.getElementById("voiceState");
-    line.hidden = !(v && v.target);
+    line.hidden = !targets.length;
     if (line.hidden) return;
-    const fresh = v.age !== null && v.age <= (v.hold || 4);
-    const hearingTarget = fresh && v.speaker === v.target;
-    line.classList.toggle("on", hearingTarget);
+    const who = targets.join(", ");
+    const following = tracker.voice_following;
+    line.classList.toggle("on", Boolean(following) && !tracker.voice_face_missing);
     let text;
-    if (v.age === null) text = `Listening for ${v.target} · waiting for the microphone`;
-    else if (v.age > 5) text = `Listening for ${v.target} · no audio for ${Math.round(v.age)} s`;
-    else if (hearingTarget) text = (tracker.motion_blocker || "").startsWith("searching")
-      ? `Heard ${v.target} · looking for you` : `Heard ${v.target} · following you`;
-    else if (fresh && v.speaker !== "silence") text = `Listening for ${v.target} · hearing ${v.speaker}`;
-    else text = `Listening for ${v.target}`;
+    if (v.age === null) text = `Listening for ${who} · waiting for the microphone`;
+    else if (v.age > 5) text = `Listening for ${who} · no audio for ${Math.round(v.age)} s`;
+    else if (following && tracker.voice_face_missing) text = `Heard ${following} · face not enrolled`;
+    else if (following) text = (tracker.motion_blocker || "").startsWith("searching")
+      ? `Heard ${following} · looking for their face` : `Heard ${following} · following`;
+    else if (v.speaker && v.speaker !== "silence") text = `Listening for ${who} · hearing ${v.speaker}`;
+    else text = `Listening for ${who}`;
     document.getElementById("voiceText").textContent = text;
+  }
+
+  const peopleBox = document.getElementById("people");
+  let shownFaces = "";
+
+  function renderPeople() {
+    const faces = tracker.reachable ? (tracker.faces || []) : [];
+    if (faces.join("|") !== shownFaces) {  // rebuild only when someone is enrolled or removed
+      shownFaces = faces.join("|");
+      peopleBox.replaceChildren(...faces.map(name => {
+        const b = document.createElement("button");
+        b.className = "person";
+        b.dataset.name = name;
+        const avatar = document.createElement("span");
+        avatar.className = "avatar";
+        avatar.textContent = name.slice(0, 1).toUpperCase();
+        avatar.setAttribute("aria-hidden", "true");
+        b.append(avatar, document.createTextNode(name));
+        b.addEventListener("click", () => sendFind(name));
+        return b;
+      }));
+    }
+    const finding = tracker.finding;
+    const found = finding && tracker.seeking === finding && tracker.target_visible;
+    for (const b of peopleBox.children) {
+      const on = b.dataset.name === finding;
+      b.classList.toggle("on", on);
+      b.classList.toggle("found", on && Boolean(found));
+      b.setAttribute("aria-pressed", String(on));
+    }
+    const hint = document.getElementById("peopleHint");
+    const searching = (tracker.motion_blocker || "").startsWith("searching");
+    hint.classList.toggle("on", Boolean(finding));
+    if (!tracker.reachable) hint.textContent = "Tracker offline";
+    else if (!faces.length) hint.textContent = "No faces enrolled yet — use Enroll face on the tracker page";
+    else if (finding && deactivated) hint.textContent = `Going to ${finding} · paused while deactivated`;
+    else if (finding && tracker.frozen) hint.textContent = `Going to ${finding} · paused (manual)`;
+    else if (finding && found) hint.textContent = `Following ${finding} · tap again to stop`;
+    else if (finding && searching) hint.textContent = `Looking for ${finding}… sweeping the room`;
+    else if (finding) hint.textContent = `Going to ${finding}…`;
+    else hint.textContent = "Tap a name and the arm will find that person";
+  }
+
+  async function sendFind(name) {
+    if (!tracker.reachable) { showToast("The tracker isn't reachable from the controller"); return; }
+    if (deactivated) { showToast("The arm is deactivated — tap Activate first"); return; }
+    const target = tracker.finding === name ? null : name;  // tapping the active person stops
+    navigator.vibrate?.(12);
+    try {
+      await request("/api/find", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: target }),
+      });
+      setConnected(true);
+      tracker.finding = target;
+      if (target) tracker.frozen = false;
+      renderPeople();
+      renderMove();
+    } catch (err) {
+      showToast(err.name === "AbortError" ? "No response from the arm controller" : `Couldn't go to ${name}: ${err.message}`);
+    }
   }
 
   function renderMove() {
@@ -655,6 +746,7 @@
       if (data.deactivated !== deactivated) renderMaster(data.deactivated);
       renderMove();
       renderVoice();
+      renderPeople();
       renderTest();
     } catch {
       setConnected(false);
@@ -662,6 +754,7 @@
       renderTest();
       renderMove();
       renderVoice();
+      renderPeople();
     }
   }
 

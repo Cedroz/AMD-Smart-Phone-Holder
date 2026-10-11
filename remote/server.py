@@ -99,6 +99,9 @@ def tracker_summary():
     return {"reachable": True, "mode": body.get("mode"), "dry_run": body.get("dry_run"),
             "held": body.get("held"), "deactivated": body.get("deactivated"), "frozen": body.get("frozen"),
             "voice": body.get("voice"), "motion_blocker": body.get("motion_blocker"),
+            "voice_following": body.get("voice_following"), "voice_face_missing": body.get("voice_face_missing"),
+            "faces": body.get("faces") or [], "finding": body.get("finding"), "seeking": body.get("seeking"),
+            "target_visible": body.get("target_visible"),
             "last_command": body.get("last_command")}
 
 
@@ -159,6 +162,21 @@ class Handler(BaseHTTPRequestHandler):
                 body = {"error": "this tracker has no test_motion command; restart tracker/track.py"}
             print(f"[remote] test_motion -> tracker {status}", flush=True)
             self._send_json(status, body)
+            return
+        if self.path == "/api/find":
+            try:
+                name = self._read_field("name")
+            except (ValueError, AttributeError):
+                self._send_json(400, {"error": "invalid JSON"})
+                return
+            if name is not None and not isinstance(name, str):
+                self._send_json(400, {"error": "name must be a string or null"})
+                return
+            status, body = tracker_request("/find", {"name": name})
+            print(f"[remote] go to {name} -> tracker {status}", flush=True)
+            if status == 404:
+                body = {"error": "this tracker has no Go to; restart tracker/track.py"}
+            self._send_json(status, body if status == 202 or "error" in body else {"error": str(body.get("detail", body))})
             return
         if self.path == "/api/move":
             try:
