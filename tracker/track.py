@@ -12,7 +12,7 @@ Run on the arm, inside the `lerobot` conda env:
     python tracker/track.py --test-tilt        # same for the up/down wrist joint
     python tracker/track.py                    # track (Ctrl+C to stop)
 
-The gripper tightens on the phone at start. Cover the camera with your hand for 3.5 s to release
+The gripper tightens on the phone at start. Cover the camera with your hand for 2 s to release
 the phone. When the program ends the gripper motor turns off so the clamp can be moved by hand.
 
 Live preview: open http://<arm-ip>:8000 in a browser on your laptop.
@@ -830,7 +830,7 @@ def main():
     p.add_argument("--contact-load", type=float, default=200.0,
                    help="stop squeezing once the gripper feels this much push-back (of 1000)")
     p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
-    p.add_argument("--cover-seconds", type=float, default=3.5,
+    p.add_argument("--cover-seconds", type=float, default=2.0,
                    help="cover the camera with your hand this long to release the phone")
     p.add_argument("--cover-detail", type=float, default=15.0,
                    help="picture counts as covered below this detail level (see detail= in the log)")
