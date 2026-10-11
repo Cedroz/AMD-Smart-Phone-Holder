@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# face recognition: photos, datasets and trained weights stay local
+data/
+models/
