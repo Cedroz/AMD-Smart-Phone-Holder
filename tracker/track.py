@@ -2023,7 +2023,7 @@ def main():
                    help="cover the camera with your hand this long to release the phone")
     p.add_argument("--cover-detail", type=float, default=15.0,
                    help="picture counts as covered below this detail level")
-    p.add_argument("--party-seconds", type=float, default=15.0,
+    p.add_argument("--party-seconds", type=float, default=7.0,
                    help="Party mode stops by itself after this long (it can't see gestures while dancing)")
     p.add_argument("--party-speed", type=float, default=1.0,
                    help="Party mode tempo (bigger = quicker direction changes, smaller swings once the servos "
