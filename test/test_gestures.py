@@ -2,7 +2,7 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-from followme.gestures import (CLOSER, DOWN, FARTHER, FREEZE, LANDSCAPE, PARTY, PORTRAIT, RESUME, BeckonDetector,
+from followme.gestures import (DOWN, FREEZE, LANDSCAPE, PARTY, PORTRAIT, RESUME,
                                GestureInterpreter, GesturePipeline, GestureZone, HandObservation, LSignDetector,
                                PointDetector, TwoPalmsDetector, UP, hand_shape, l_shape, pointing)
 from followme.phase5.replay import Clock
@@ -99,11 +99,6 @@ class InterpreterTests(unittest.TestCase):
 
 
 
-def curl(openness, fingers='up', x=.5, y=.4):
-    label = 'Open_Palm' if openness > 1.6 else 'Closed_Fist' if openness < 1. else 'None'
-    return HandObservation(label, .9, x, y, openness, fingers)
-
-
 def flat_hand(fingers_up=True, curled=False):
     """21 synthetic landmarks: wrist at the bottom, fingers pointing up (or down)."""
     sign = -1 if fingers_up else 1
@@ -132,79 +127,9 @@ class HandShapeTests(unittest.TestCase):
         self.assertEqual(hand_shape([(.5, .5)] * 21), (None, None))
 
 
-class BeckonTests(unittest.TestCase):
+class PipelineTests(unittest.TestCase):
     def setUp(self):
         self.clock = Clock()
-        self.detector = BeckonDetector()
-
-    def run_frames(self, frames, detector=None):
-        detector, commands = detector or self.detector, []
-        for hands in frames:
-            self.clock.advance()
-            command = detector.update(hands, self.clock(), FACE)
-            if command:
-                commands.append(command)
-        return commands
-
-    @staticmethod
-    def beckon(cycles, fingers='up', open_frames=4, closed_frames=4, **hand):
-        """One cycle = open for open_frames, curled for closed_frames, at 20 Hz."""
-        frames = []
-        for _ in range(cycles):
-            frames += [[curl(2., fingers, **hand)]] * open_frames + [[curl(1., fingers, **hand)]] * closed_frames
-        return frames + [[curl(2., fingers, **hand)]] * open_frames
-
-    def test_beckon_steps_closer_after_second_cycle(self):
-        self.assertEqual(self.run_frames(self.beckon(1)), [])
-        self.setUp()
-        self.assertEqual(self.run_frames(self.beckon(4)), [CLOSER, CLOSER, CLOSER])
-
-    def test_fingers_down_flick_steps_farther(self):
-        self.assertEqual(self.run_frames(self.beckon(3, fingers='down')), [FARTHER, FARTHER])
-
-    def test_static_open_hand_does_nothing(self):
-        self.assertEqual(self.run_frames([[curl(2.)]] * 60), [])
-
-    def test_slow_curls_are_ignored(self):
-        self.assertEqual(self.run_frames(self.beckon(4, closed_frames=20)), [])
-
-    def test_long_pause_restarts_count(self):
-        frames = self.beckon(1) + [[curl(2.)]] * 40 + self.beckon(1)
-        self.assertEqual(self.run_frames(frames), [])
-
-    def test_hand_outside_zone_is_ignored(self):
-        self.assertEqual(self.run_frames(self.beckon(4, y=.9)), [])
-
-    def test_sideways_hand_is_ignored(self):
-        self.assertEqual(self.run_frames(self.beckon(4, fingers=None)), [])
-
-    def test_switching_direction_restarts_count(self):
-        frames = self.beckon(1) + self.beckon(1, fingers='down')
-        self.assertEqual(self.run_frames(frames), [])
-
-    def test_lost_hand_resets(self):
-        frames = self.beckon(1) + [[]] * 10 + self.beckon(1)
-        self.assertEqual(self.run_frames(frames), [])
-
-    def test_pipeline_beckon_does_not_freeze(self):
-        pipeline = GesturePipeline()
-        commands = [c for c in (pipeline.update(h, self._tick(), FACE) for h in self.beckon(8)) if c]
-        self.assertEqual(set(commands), {CLOSER})
-
-    def test_resume_is_not_suppressed_by_another_hand_curling(self):
-        pipeline = GesturePipeline()
-        commands = []
-        for index in range(100):
-            openness = 2. if index % 8 < 4 else 1.
-            hands = [HandObservation('Open_Palm' if openness == 2 else 'None',
-                                     .99, .5, .4, openness, 'up')]
-            if index >= 20:
-                hands.append(thumb(x=.55))
-            command = pipeline.update(hands, index * .05, FACE)
-            if command:
-                commands.append(command)
-        self.assertEqual(commands.count(RESUME), 1)
-        self.assertNotIn(FREEZE, commands)
 
     def test_pipeline_still_freezes_and_resumes(self):
         pipeline = GesturePipeline()
