@@ -3,8 +3,8 @@ from pathlib import Path
 import unittest
 
 from followme.gestures import (CLOSER, FARTHER, FREEZE, LANDSCAPE, PORTRAIT, RESUME, BeckonDetector,
-                               GestureInterpreter, GesturePipeline, GestureZone, HandObservation, TwistDetector,
-                               hand_pose, hand_shape)
+                               GestureInterpreter, GesturePipeline, GestureZone, HandObservation, LSignDetector,
+                               PointDetector, hand_shape, l_shape, pointing)
 from followme.phase5.replay import Clock
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -238,100 +238,164 @@ class RecognizerLandmarkTests(unittest.TestCase):
                 self.assertGreater(hands[0].openness, 1.6)
 
 
-def blade(angle, spread=.2, openness=2., label='Open_Palm', x=.5, y=.4):
-    """A flat hand seen edge-on (spread small) pointing at `angle` degrees (0 up, 90 right)."""
-    return HandObservation(label, .9, x, y, openness, None, spread, angle)
+def l_hand(thumb_dx=-.04, curl_others=True, index_up=True):
+    """21 synthetic landmarks: index finger up, thumb out sideways by `thumb_dx` per joint, middle,
+    ring and little fingers curled (or straight with curl_others=False)."""
+    points = flat_hand()
+    for joint in range(1, 5):  # thumb, from the base of the palm outwards
+        points[joint] = (.46 + thumb_dx * joint, .48 - .01 * joint)
+    if not index_up:
+        points[6], points[7], points[8] = (.44, .42), (.45, .45), (.46, .47)
+    if curl_others:
+        for base, x in ((9, .48), (13, .52), (17, .56)):
+            points[base + 1], points[base + 2], points[base + 3] = (x, .37), (x, .41), (x, .43)
+    return points
 
 
-def rotate_points(points, degrees, pivot=(.5, .5)):
-    import math
-    a = math.radians(degrees)
-    return [(pivot[0] + (x - pivot[0]) * math.cos(a) - (y - pivot[1]) * math.sin(a),
-             pivot[1] + (x - pivot[0]) * math.sin(a) + (y - pivot[1]) * math.cos(a)) for x, y in points]
+def sign(hand, l_shape=True, x=.5, y=.4):
+    return HandObservation('None', .5, x, y, 1.2, 'up', hand, l_shape)
 
 
-class HandPoseTests(unittest.TestCase):
-    def test_palm_facing_camera_is_wide_and_upright(self):
-        spread, angle = hand_pose(flat_hand())
-        self.assertGreater(spread, .5)
-        self.assertAlmostEqual(angle, 0, delta=1)
+class LShapeTests(unittest.TestCase):
+    def test_l_shape(self):
+        self.assertTrue(l_shape(l_hand()))
+        self.assertTrue(l_shape(l_hand(thumb_dx=.04)))  # thumb out the other way: the other hand
 
-    def test_edge_on_hand_is_narrow(self):
-        edge_on = [(.5 + (x - .5) * .2, y) for x, y in flat_hand()]  # knuckles nearly overlap
-        self.assertLess(hand_pose(edge_on)[0], .5)
+    def test_open_hand_is_not_an_l(self):
+        self.assertFalse(l_shape(flat_hand()))
+        self.assertFalse(l_shape(l_hand(curl_others=False)))
 
-    def test_angle_follows_the_fingers(self):
-        self.assertAlmostEqual(hand_pose(rotate_points(flat_hand(), 90))[1], 90, delta=1)
-        self.assertAlmostEqual(hand_pose(rotate_points(flat_hand(), -90))[1], -90, delta=1)
-        self.assertAlmostEqual(abs(hand_pose(flat_hand(fingers_up=False))[1]), 180, delta=1)
+    def test_tucked_thumb_is_not_an_l(self):
+        self.assertFalse(l_shape(l_hand(thumb_dx=-.005)))
+
+    def test_curled_index_is_not_an_l(self):
+        self.assertFalse(l_shape(l_hand(index_up=False)))
 
     def test_degenerate_hand(self):
-        self.assertEqual(hand_pose([(.5, .5)] * 21), (None, None))
+        self.assertFalse(l_shape([(.5, .5)] * 21))
 
 
-class TwistTests(unittest.TestCase):
+class LSignTests(unittest.TestCase):
     def setUp(self):
         self.clock = Clock()
-        self.detector = TwistDetector()
+        self.detector = LSignDetector()
 
-    def run_frames(self, frames, detector=None):
-        detector, commands = detector or self.detector, []
-        for hands in frames:
+    def feed(self, hands, seconds):
+        commands = []
+        for _ in range(round(seconds / .05)):
             self.clock.advance()
-            command = detector.update(hands, self.clock(), FACE)
+            command = self.detector.update(hands, self.clock(), FACE)
             if command:
                 commands.append(command)
         return commands
 
-    @staticmethod
-    def turn(start, end, hold_frames=10, turn_frames=6, **hand):
-        """Hold at `start` degrees, sweep to `end`, hold there (20 Hz)."""
-        sweep = [start + (end - start) * i / turn_frames for i in range(1, turn_frames)]
-        return ([[blade(start, **hand)]] * hold_frames + [[blade(a, **hand)] for a in sweep]
-                + [[blade(end, **hand)]] * hold_frames)
+    def test_left_l_rotates_to_landscape_once(self):
+        self.assertEqual(self.feed([sign('Left')], .4), [])
+        self.assertEqual(self.feed([sign('Left')], 2), [LANDSCAPE])
 
-    def test_upright_to_sideways_rotates_to_landscape(self):
-        self.assertEqual(self.run_frames(self.turn(0, 90)), [LANDSCAPE])
+    def test_right_l_rotates_back_to_portrait(self):
+        self.assertEqual(self.feed([sign('Left')], 1) + self.feed([], 1.5) + self.feed([sign('Right')], 1),
+                         [LANDSCAPE, PORTRAIT])
 
-    def test_turning_back_rotates_to_portrait(self):
-        self.assertEqual(self.run_frames(self.turn(0, -90) + self.turn(-90, 0)), [LANDSCAPE, PORTRAIT])
+    def test_brief_l_is_ignored(self):
+        self.assertEqual(self.feed([sign('Left')], .3) + self.feed([], .5), [])
 
-    def test_holding_one_pose_does_nothing(self):
-        self.assertEqual(self.run_frames([[blade(0)]] * 80), [])
-        self.assertEqual(self.run_frames([[blade(90)]] * 80, TwistDetector()), [])
-
-    def test_palm_facing_camera_does_not_count(self):
-        self.assertEqual(self.run_frames(self.turn(0, 90, spread=.85)), [])
-
-    def test_fist_does_not_count(self):
-        self.assertEqual(self.run_frames(self.turn(0, 90, openness=1.)), [])
-
-    def test_slow_steady_turn_still_counts(self):
-        self.assertEqual(self.run_frames(self.turn(0, 90, turn_frames=40)), [LANDSCAPE])
-
-    def test_pausing_half_way_is_ignored(self):
-        frames = [[blade(0)]] * 10 + [[blade(45)]] * 40 + [[blade(90)]] * 10
-        self.assertEqual(self.run_frames(frames), [])
-
-    def test_brief_flicker_is_ignored(self):
-        frames = [[blade(0)]] * 10 + [[blade(90)]] * 3 + [[blade(0)]] * 10
-        self.assertEqual(self.run_frames(frames), [])
+    def test_not_an_l_or_unknown_hand_is_ignored(self):
+        self.assertEqual(self.feed([sign('Left', l_shape=False)], 2), [])
+        self.assertEqual(self.feed([sign(None)], 2), [])
 
     def test_hand_outside_zone_is_ignored(self):
-        self.assertEqual(self.run_frames(self.turn(0, 90, y=.9)), [])
+        self.assertEqual(self.feed([sign('Left', y=.9)], 2), [])
 
-    def test_lost_hand_resets(self):
-        frames = [[blade(0)]] * 10 + [[]] * 20 + [[blade(90)]] * 10
-        self.assertEqual(self.run_frames(frames), [])
-
-    def test_pipeline_twist_does_not_freeze(self):
+    def test_pipeline(self):
         pipeline, commands = GesturePipeline(), []
-        for hands in self.turn(0, 90, hold_frames=30) + self.turn(90, 0, hold_frames=30):
+        for hands in [[sign('Left')]] * 20 + [[]] * 30 + [[sign('Right')]] * 20:
             self.clock.advance()
             command = pipeline.update(hands, self.clock(), FACE)
             if command:
                 commands.append(command)
         self.assertEqual(commands, [LANDSCAPE, PORTRAIT])
+
+    def test_recognizer_reports_the_persons_own_hand(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        import numpy as np
+        from followme.gestures.recognizer import MediaPipeGestureRecognizer
+        recognizer = MediaPipeGestureRecognizer.__new__(MediaPipeGestureRecognizer)
+        recognizer._mp = SimpleNamespace(Image=Mock(), ImageFormat=SimpleNamespace(SRGB=0))
+        recognizer._recognizer = Mock()
+        landmarks = [SimpleNamespace(x=x, y=y) for x, y in l_hand()]
+        # MediaPipe assumes a mirrored selfie; the arm's camera isn't mirrored, so 'Right' is the left hand.
+        recognizer._recognizer.recognize_for_video.return_value = SimpleNamespace(
+            gestures=[[]], hand_landmarks=[landmarks], handedness=[[SimpleNamespace(category_name='Right')]])
+        hand = recognizer.recognize(np.zeros((480, 640, 3), np.uint8), 0)[0]
+        self.assertEqual((hand.hand, hand.l_shape), ('Left', True))
+
+
+def point_hand(up=True):
+    """Index finger out (up, or flipped to point down), thumb tucked, other fingers curled."""
+    points = l_hand(thumb_dx=-.005)
+    return points if up else [(x, 1 - y) for x, y in points]
+
+
+def pointer(direction, x=.5, y=.4):
+    return HandObservation('Pointing_Up' if direction == 'up' else 'None', .8, x, y, 1.2, direction,
+                           'Left', False, direction)
+
+
+class PointingTests(unittest.TestCase):
+    def test_shape(self):
+        self.assertEqual(pointing(point_hand()), 'up')
+        self.assertEqual(pointing(point_hand(up=False)), 'down')
+
+    def test_l_and_open_hand_are_not_pointing(self):
+        self.assertIsNone(pointing(l_hand()))
+        self.assertIsNone(pointing(flat_hand()))
+
+    def test_pointing_sideways_is_ignored(self):
+        sideways = [(.5 + (y - .5), .5 + (x - .5)) for x, y in point_hand()]  # rotated 90 degrees
+        self.assertIsNone(pointing(sideways))
+
+
+class PointDetectorTests(unittest.TestCase):
+    def setUp(self):
+        self.clock = Clock()
+        self.detector = PointDetector()
+
+    def feed(self, hands, seconds):
+        commands = []
+        for _ in range(round(seconds / .05)):
+            self.clock.advance()
+            command = self.detector.update(hands, self.clock(), FACE)
+            if command:
+                commands.append(command)
+        return commands
+
+    def test_point_up_steps_closer_and_repeats_while_held(self):
+        self.assertEqual(self.feed([pointer('up')], .4), [])
+        self.assertEqual(self.feed([pointer('up')], 1.6), [CLOSER] * 4)
+        self.assertEqual(self.feed([], 1), [])
+
+    def test_point_down_steps_farther(self):
+        self.assertEqual(self.feed([pointer('down')], 1), [FARTHER, FARTHER])
+
+    def test_brief_point_is_ignored(self):
+        self.assertEqual(self.feed([pointer('up')], .3) + self.feed([], .5), [])
+
+    def test_switching_direction_restarts_hold(self):
+        self.assertEqual(self.feed([pointer('up')], .7) + self.feed([pointer('down')], .3), [CLOSER])
+
+    def test_hand_outside_zone_is_ignored(self):
+        self.assertEqual(self.feed([pointer('up', y=.9)], 2), [])
+
+    def test_pipeline_point_does_not_freeze(self):
+        pipeline, commands = GesturePipeline(), []
+        for hands in [[pointer('up')]] * 20:
+            self.clock.advance()
+            command = pipeline.update(hands, self.clock(), FACE)
+            if command:
+                commands.append(command)
+        self.assertEqual(set(commands), {CLOSER})
 
 
 @unittest.skipUnless(importlib.util.find_spec('mediapipe') and MODEL.is_file(), 'needs the vision environment and model')

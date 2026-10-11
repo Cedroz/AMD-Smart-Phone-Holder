@@ -1,13 +1,11 @@
-"""Beckon/shoo detection from repeated finger curls, and the edge-on hand twist that rotates the
-phone; no camera or robot imports."""
+"""Beckon/shoo detection from repeated finger curls, pointing up/down, and the L hand shape; no camera
+or robot imports."""
 import math
 
 from followme.gestures.interpreter import GestureZone
 
 CLOSER = 'closer'
 FARTHER = 'farther'
-LANDSCAPE = 'landscape'
-PORTRAIT = 'portrait'
 WRIST, MIDDLE_KNUCKLE = 0, 9
 KNUCKLES = (5, 9, 13, 17)
 FINGERTIPS = (8, 12, 16, 20)
@@ -32,92 +30,95 @@ def hand_shape(points, aspect=1.):
     return openness, fingers
 
 
-def hand_pose(points, aspect=1.):
-    """(spread, angle) from 21 normalised (x, y) hand landmarks.
+THUMB_BASE, THUMB_TIP, INDEX_KNUCKLE, INDEX_TIP = 2, 4, 5, 8
+CURLED_FINGERS = ((12, 9), (16, 13), (20, 17))  # (tip, knuckle) for middle, ring, little finger
 
-    spread is the index-to-pinky knuckle width in palm lengths: about .8 for a palm facing the
-    camera, under about .4 for a hand seen edge-on. angle is the direction from the wrist to the
-    knuckles in degrees: 0 fingers up, +90 pointing right, -90 left, +-180 down. aspect is frame
-    width / height.
-    """
-    points = [(x * aspect, y) for x, y in points]
+
+def _index_only(points):
+    """(index finger straight and the other three curled, thumb out) for scaled landmarks, or None."""
     wrist = points[WRIST]
     palm = math.dist(points[MIDDLE_KNUCKLE], wrist)
     if palm <= 0:
-        return None, None
-    spread = math.dist(points[KNUCKLES[0]], points[KNUCKLES[-1]]) / palm
-    dx = sum(points[k][0] for k in KNUCKLES) / len(KNUCKLES) - wrist[0]
-    dy = sum(points[k][1] for k in KNUCKLES) / len(KNUCKLES) - wrist[1]
-    return spread, math.degrees(math.atan2(dx, -dy))
+        return None
+
+    def reach(tip, knuckle):
+        base = math.dist(points[knuckle], wrist)
+        return math.dist(points[tip], wrist) / base if base > 0 else 0.
+
+    if reach(INDEX_TIP, INDEX_KNUCKLE) < 1.5 or any(reach(t, k) > 1.3 for t, k in CURLED_FINGERS):
+        return None
+    return math.dist(points[THUMB_TIP], points[INDEX_KNUCKLE]) / palm >= .6
 
 
-class TwistDetector:
-    """Turning a flat, edge-on hand 90 degrees rotates the phone with it.
+def pointing(points, aspect=1.):
+    """'up' or 'down' when only the index finger is out (thumb tucked) and it points within 35
+    degrees of straight up or down; otherwise None. A thumb sticking out makes it an L instead."""
+    points = [(x * aspect, y) for x, y in points]
+    if _index_only(points) is not False:  # None: not an index-only hand; True: thumb out (an L)
+        return None
+    dx = points[INDEX_TIP][0] - points[INDEX_KNUCKLE][0]
+    dy = points[INDEX_TIP][1] - points[INDEX_KNUCKLE][1]
+    if abs(dx) > abs(dy) * math.tan(math.radians(35)):
+        return None
+    return 'up' if dy < 0 else 'down'
 
-    Hold the hand up edge-on (little finger towards the camera, like a karate chop), then turn it
-    to point sideways: 'landscape'. Turn it back upright: 'portrait'. Each pose must be held for
-    `settle_s`, and the turn between them take at most `max_turn_s`. A palm facing the camera is
-    too wide to count, so it can't be confused with the open-palm freeze.
+
+def l_shape(points, aspect=1.):
+    """True when 21 normalised (x, y) hand landmarks make an L.
+
+    The index finger is straight (its tip about twice as far from the wrist as its knuckle), the
+    thumb sticks out away from the index knuckle at roughly a right angle to the index finger, and
+    the middle, ring and little fingers are curled back towards the palm.
+    """
+    points = [(x * aspect, y) for x, y in points]
+    if not _index_only(points):
+        return False
+    thumb = (points[THUMB_TIP][0] - points[THUMB_BASE][0], points[THUMB_TIP][1] - points[THUMB_BASE][1])
+    index = (points[INDEX_TIP][0] - points[INDEX_KNUCKLE][0], points[INDEX_TIP][1] - points[INDEX_KNUCKLE][1])
+    norms = math.hypot(*thumb) * math.hypot(*index)
+    if norms <= 0:
+        return False
+    angle = math.degrees(math.acos(max(-1., min(1., (thumb[0] * index[0] + thumb[1] * index[1]) / norms))))
+    return 50. <= angle <= 130.
+
+
+class PointDetector:
+    """Pointing the index finger up steps 'closer', pointing down steps 'farther'.
+
+    The first step comes after `hold_s`, then one every `repeat_s` while the point is held, so the
+    phone keeps moving until the hand drops. Gaps shorter than `grace_s` don't stop it.
     """
 
-    def __init__(self, edge_on_below=.5, open_above=1.4, upright_within=30., sideways_within=30.,
-                 settle_s=.3, max_turn_s=1.2, grace_s=.3, zone=None):
-        self.edge_on_below = edge_on_below
-        self.open_above = open_above
-        self.upright_within = upright_within
-        self.sideways_within = sideways_within
-        self.settle_s = settle_s
-        self.max_turn_s = max_turn_s
-        self.grace_s = grace_s
+    def __init__(self, hold_s=.5, repeat_s=.4, grace_s=.2, zone=None):
+        self.hold_s, self.repeat_s, self.grace_s = hold_s, repeat_s, grace_s
         self.zone = zone or GestureZone()
-        self._last_seen = None
         self._reset()
 
     def _reset(self):
-        self._pose = self._pose_seen = self._candidate = self._candidate_since = None
-
-    def _select(self, hands, face_center):
-        valid = [hand for hand in hands if hand.spread is not None and hand.angle is not None
-                 and hand.spread <= self.edge_on_below and (hand.openness or 0) >= self.open_above
-                 and self.zone.contains(hand, face_center)]
-        return max(valid, key=lambda hand: hand.score) if valid else None
-
-    def _classify(self, angle):
-        if abs(angle) <= self.upright_within:
-            return 'upright'
-        if abs(abs(angle) - 90) <= self.sideways_within:
-            return 'sideways'
-        return None  # mid-turn or pointing down
+        self._direction = self._since = self._last_seen = self._last_step = None
 
     def active(self, now):
-        """True while an edge-on hand is in view, so static gestures can be suppressed."""
+        """True while a point is being held, so static gestures can be suppressed."""
         return self._last_seen is not None and now - self._last_seen <= self.grace_s
 
     def update(self, hands, now, face_center=None):
-        """Feed one frame's hands; returns 'landscape', 'portrait' or None."""
-        hand = self._select(hands, face_center)
-        if hand is None:
+        """Feed one frame's hands; returns 'closer', 'farther' or None."""
+        valid = [hand for hand in hands if hand.pointing in ('up', 'down') and self.zone.contains(hand, face_center)]
+        if not valid:
             if self._last_seen is not None and now - self._last_seen > self.grace_s:
                 self._reset()
-                self._last_seen = None
             return None
+        direction = CLOSER if max(valid, key=lambda hand: hand.score).pointing == 'up' else FARTHER
+        if direction != self._direction:
+            self._reset()
+            self._direction, self._since = direction, now
         self._last_seen = now
-        pose = self._classify(hand.angle)
-        if pose is None:
+        if now - self._since < self.hold_s:
             return None
-        if pose == self._pose:
-            self._pose_seen, self._candidate = now, None
+        if self._last_step is not None and now - self._last_step < self.repeat_s:
             return None
-        if pose != self._candidate:
-            self._candidate, self._candidate_since = pose, now
-        if now - self._candidate_since < self.settle_s:
-            return None
-        previous, previous_seen = self._pose, self._pose_seen
-        turned_in = self._candidate_since - previous_seen if previous_seen is not None else None
-        self._pose, self._pose_seen, self._candidate = pose, now, None
-        if previous is not None and turned_in <= self.max_turn_s:
-            return LANDSCAPE if pose == 'sideways' else PORTRAIT
-        return None
+        self._last_step = now
+        return direction
 
 
 class BeckonDetector:

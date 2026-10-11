@@ -1,7 +1,7 @@
 """MediaPipe hand-gesture wrapper; runs in the vision environment and never imports robot modules."""
 from followme.environment import verified_model
 from followme.gestures.interpreter import HandObservation
-from followme.gestures.motion import hand_pose, hand_shape
+from followme.gestures.motion import hand_shape, l_shape, pointing
 
 WRIST, MIDDLE_KNUCKLE = 0, 9
 
@@ -25,16 +25,21 @@ class MediaPipeGestureRecognizer:
         image = self._mp.Image(image_format=self._mp.ImageFormat.SRGB, data=rgb)
         result = self._recognizer.recognize_for_video(image, int(timestamp_ms))
         hands, aspect = [], frame_bgr.shape[1] / frame_bgr.shape[0]
+        handedness = getattr(result, 'handedness', None) or []
         for index, landmarks in enumerate(result.hand_landmarks):
             gestures = result.gestures[index] if index < len(result.gestures) else []
             label, score = (gestures[0].category_name, float(gestures[0].score)) if gestures else ("None", 0.0)
             wrist, knuckle = landmarks[WRIST], landmarks[MIDDLE_KNUCKLE]
             points = [(point.x, point.y) for point in landmarks]
             openness, fingers = hand_shape(points, aspect)
-            spread, angle = hand_pose(points, aspect)
+            sides = handedness[index] if index < len(handedness) else []
+            side = sides[0].category_name if sides else None
+            # MediaPipe labels hands as if the picture were a mirrored selfie. The arm's camera is not
+            # mirrored, so swap to get the person's own hand (the tracker's --swap-hands undoes this).
+            side = {'Left': 'Right', 'Right': 'Left'}.get(side)
             hands.append(HandObservation(label, score,
                                          (wrist.x + knuckle.x) / 2, (wrist.y + knuckle.y) / 2, openness, fingers,
-                                         spread, angle))
+                                         side, l_shape(points, aspect), pointing(points, aspect)))
         return hands
 
     def close(self):
@@ -95,7 +100,9 @@ def main():
                 command = pipeline.update(hands, now, face)
                 feedback = {'hands': [{'label': hand.label, 'score': round(hand.score, 2),
                              'x': hand.x, 'y': hand.y, 'fingers': hand.fingers,
-                             'openness': hand.openness, 'in_zone': pipeline.interpreter.zone.contains(hand, face)}
+                             'openness': hand.openness, 'hand': hand.hand, 'l_shape': hand.l_shape,
+                             'pointing': hand.pointing,
+                             'in_zone': pipeline.interpreter.zone.contains(hand, face)}
                              for hand in hands], 'pending': pipeline.interpreter.pending(now), 'command': command}
                 channel.send({'type': 'result', **identity, 'command': command, 'gesture': feedback, 'error': None})
             except Exception as exc:

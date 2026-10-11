@@ -1,8 +1,11 @@
-"""Turns per-frame hand observations into freeze/resume commands; no camera or robot imports."""
-from dataclasses import dataclass
+"""Turns per-frame hand observations into freeze/resume and landscape/portrait commands; no camera
+or robot imports."""
+from dataclasses import dataclass, replace
 
 FREEZE = 'freeze'
 RESUME = 'resume'
+LANDSCAPE = 'landscape'
+PORTRAIT = 'portrait'
 DEFAULT_BINDINGS = {'Open_Palm': FREEZE, 'Thumb_Up': RESUME}
 
 
@@ -14,8 +17,9 @@ class HandObservation:
     y: float  # palm centre, normalised to the frame (0 top, 1 bottom)
     openness: float | None = None  # mean fingertip distance in palm lengths; see motion.hand_shape
     fingers: str | None = None  # 'up', 'down' or None when the hand is sideways
-    spread: float | None = None  # index-to-pinky knuckle width in palm lengths; small = edge-on; see motion.hand_pose
-    angle: float | None = None  # direction the fingers point, degrees: 0 up, +90 right, -90 left, 180 down
+    hand: str | None = None  # the person's own 'Left' or 'Right' hand, None if unknown
+    l_shape: bool = False  # thumb and index out at a right angle, other fingers curled; see motion.l_shape
+    pointing: str | None = None  # 'up' or 'down' when only the index finger is out; see motion.pointing
 
 
 @dataclass(frozen=True)
@@ -89,3 +93,22 @@ class GestureInterpreter:
         if self._candidate is None:
             return None
         return self.bindings[self._candidate], min(1., (now - self._since) / self.hold_s)
+
+
+class LSignDetector:
+    """An L made with the left hand means 'landscape'; with the right hand, 'portrait'.
+
+    Held like the other static gestures (hold, cooldown, release before repeating), using
+    GestureInterpreter. MediaPipe has no L category, so it comes from the hand's shape (l_shape)
+    and side (hand), not from its gesture label.
+    """
+
+    def __init__(self, hold_s=.5, zone=None, **interpreter):
+        self.interpreter = GestureInterpreter({'L_Left': LANDSCAPE, 'L_Right': PORTRAIT},
+                                              hold_s=hold_s, zone=zone, **interpreter)
+
+    def update(self, hands, now, face_center=None):
+        """Feed one frame's hands; returns 'landscape', 'portrait' or None."""
+        signs = [replace(hand, label=f'L_{hand.hand}', score=1.) for hand in hands
+                 if hand.l_shape and hand.hand in ('Left', 'Right')]
+        return self.interpreter.update(signs, now, face_center)

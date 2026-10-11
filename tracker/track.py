@@ -6,8 +6,9 @@ find the person, measure how far they are from the image center, and nudge
 shoulder_pan (left/right) and optionally wrist_flex (up/down) to re-center them.
 The preview also serves POST /commands and GET /status (Rotate 90 and Party mode
 buttons included). Optional --gestures
-uses the separate vision environment for closer/farther/freeze/resume commands, and turning a
-flat edge-on hand 90 degrees rotates the phone to match (landscape/portrait).
+uses the separate vision environment for closer/farther/freeze/resume commands (pointing the index
+finger up/down also moves the phone closer/farther); an L sign with the left hand rotates the phone
+to landscape, with the right hand back to portrait.
 Optional --distance maintains an approximate calibrated camera-to-user distance.
 Cover the camera with your hand for 2 s to release the phone (Grip phone puts it back).
 
@@ -1704,10 +1705,15 @@ def run(args):
                         point = (int(hand["x"] * w), int(hand["y"] * h))
                         color = (0, 255, 0) if hand["in_zone"] else (0, 160, 255)
                         cv2.circle(frame, point, 8, color, 2)
-                        cv2.putText(frame, f'{hand["label"]} {hand["score"]:.2f}', point,
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-                    if reply.get("command"):
-                        control.submit(reply["command"])
+                        text = (f'L sign ({hand.get("hand")} hand)' if hand.get("l_shape")
+                                else f'pointing {hand["pointing"]}' if hand.get("pointing")
+                                else f'{hand["label"]} {hand["score"]:.2f}')
+                        cv2.putText(frame, text, point, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+                    command = reply.get("command")
+                    if args.swap_hands and command in ("landscape", "portrait"):
+                        command = "portrait" if command == "landscape" else "landscape"
+                    if command:
+                        control.submit(command)
                 except Exception:
                     # Do not continue moving if an enabled gesture control stops working.
                     control.frozen = True
@@ -1960,9 +1966,11 @@ def main():
     p.add_argument("--height", action="store_true",
                    help="follow up/down by moving the phone (shoulder+elbow via IK) as well as tilting")
     p.add_argument("--gestures", action="store_true",
-                   help="enable closer/farther/freeze/resume and the hand twist (rotate) via the vision worker")
+                   help="enable closer/farther/freeze/resume and the L sign (rotate) via the vision worker")
     p.add_argument("--gesture-python", default=str(ROOT / ".venv-vision/bin/python"), help="isolated vision Python interpreter")
     p.add_argument("--gesture-step", type=float, default=0.02, help="metres per closer/farther command")
+    p.add_argument("--swap-hands", action="store_true",
+                   help="if the L sign's left/right come out reversed (left-hand L should rotate to landscape)")
     p.add_argument("--distance", type=float, help="follow at this approximate calibrated distance in metres")
     p.add_argument("--distance-reference", type=float, help="known camera-to-face calibration distance in metres")
     p.add_argument("--distance-face-width", type=float, help="face-box width in pixels at the reference distance")
