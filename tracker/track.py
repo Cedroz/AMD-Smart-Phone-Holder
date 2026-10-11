@@ -19,6 +19,7 @@ Live preview: open http://<arm-ip>:8000 in a browser on your laptop.
 """
 
 import argparse
+import atexit
 import glob
 import http.server
 import logging
@@ -97,6 +98,9 @@ class Camera:
         self.running = True
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.thread.start()
+        # However the program ends (even a crash during startup), stop the reader thread first: if
+        # Python exits while it's inside OpenCV, it aborts with "FATAL: exception not rethrown".
+        atexit.register(self.close)
 
     def _loop(self):
         while self.running:
@@ -122,8 +126,10 @@ class Camera:
         # Let the reader thread finish its current read before releasing the device; releasing it
         # mid-read crashes OpenCV ("terminate called without an active exception") and can leave the
         # camera stuck so the next run can't open it.
+        if not self.running:
+            return
         self.running = False
-        self.thread.join(timeout=2.0)
+        self.thread.join(timeout=3.0)
         self.cap.release()
 
 
@@ -438,7 +444,7 @@ def free_gripper_fresh(port):
 
     try:
         r = SO101Follower(SO101FollowerConfig(port=port, id=FOLLOWER_ID))
-        r.bus.connect()
+        r.bus.connect(handshake=False)  # skip the all-motors check: only the gripper matters here
         r.bus.disable_torque(GRIP, num_retry=3)
         r.bus.disconnect(disable_torque=False)
         log.info("Gripper is free")
