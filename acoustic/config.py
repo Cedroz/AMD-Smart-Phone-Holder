@@ -7,8 +7,8 @@ SAMPLE_RATE = 16_000
 CHANNELS = 1
 WINDOW_SECONDS = 1.5
 HOP_SECONDS = 0.5
-UNKNOWN_THRESHOLD = 0.75
-SMOOTHING_COUNT = 3
+UNKNOWN_THRESHOLD = 0.45  # lower = names people more readily; the placeholder voices keep strangers out
+SMOOTHING_COUNT = 2  # windows in a row before switching speaker (2 = about 1 s)
 MIC_DEVICE_INDEX = None
 MIC_INPUT_MODE = "tcp"
 MIC_TCP_HOST = "127.0.0.1"
@@ -33,6 +33,7 @@ ENROLL_PROMPTS = (
 )
 
 EMBED_BENCHMARK_REPEATS = 10
+EMBED_THREADS = 2  # CPU threads for the speaker encoder (PyTorch would otherwise use every core)
 LIBRISPEECH_CONFIG = "clean"
 LIBRISPEECH_SPLIT = "validation"
 LIBRISPEECH_PLACEHOLDER_IDS = ("1272", "1284", "1320")

@@ -127,8 +127,54 @@
   .status .phone .dot { width: 7px; height: 7px; }
   .status .phone.held { color: var(--ok); }
   .status .phone.held .dot { background: var(--ok); }
-  .status .voice.on { color: var(--ambient); }
-  .status .voice.on .dot { background: var(--ambient); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ambient) 25%, transparent); }
+  .camera { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
+  .camera-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; }
+  .camera-head .label { font-size: 13px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .camera-head .live { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .camera.streaming .camera-head .live { background: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 25%, transparent); }
+  .camera-view { position: relative; aspect-ratio: 4 / 3; background: #000; display: grid; place-items: center; }
+  .camera-view img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .camera:not(.streaming) .camera-view img { visibility: hidden; }  /* no broken-image text while connecting */
+  .camera-view .note { position: absolute; color: #c8ccd4; font-size: 14px; text-align: center; padding: 0 16px; }
+  .camera.hidden .camera-view { display: none; }
+  .sound {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 16px 18px;
+    box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px;
+  }
+  .sound-head { display: flex; align-items: center; gap: 14px; }
+  .sound .badge {
+    width: 44px; height: 44px; border-radius: 14px; flex: none; display: grid; place-items: center;
+    background: var(--surface-2); color: var(--muted); transition: background .2s, color .2s;
+  }
+  .sound .badge svg { width: 24px; height: 24px; }
+  .sound .label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .sound-who { font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+  .meter { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .meter-fill { height: 100%; width: 0; border-radius: inherit; background: var(--muted); transition: width .25s ease, background .2s; }
+  .sound[data-kind="person"] .meter-fill { background: var(--spot); }
+  .sound[data-kind="person"] .badge { background: var(--spot-soft); color: var(--spot); }
+  .sound[data-kind="us"] .meter-fill { background: var(--ambient); }
+  .sound[data-kind="us"] .badge { background: var(--ambient-soft); color: var(--ambient); }
+  .sound-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .sound-switches { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+  .sound-hint { font-size: 13px; color: var(--muted); }
+  .sound-hint.on { color: var(--ambient); font-weight: 600; }
+  .switch {
+    display: inline-flex; align-items: center; gap: 8px; flex: none; font-size: 13px; font-weight: 600; color: var(--muted);
+    background: none; padding: 4px 0;
+  }
+  .switch i {
+    position: relative; width: 40px; height: 24px; border-radius: 999px; background: var(--surface-2);
+    border: 1px solid var(--border); transition: background .2s;
+  }
+  .switch i::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .2s;
+  }
+  .switch[aria-checked="true"] { color: var(--text); }
+  .switch[aria-checked="true"] i { background: var(--ambient); border-color: var(--ambient); }
+  .switch[aria-checked="true"] i::after { transform: translateX(16px); }
+  .switch:focus-visible { outline: 3px solid var(--ambient); outline-offset: 2px; border-radius: 6px; }
 
   .spacer { flex: 1; }
 
@@ -205,6 +251,26 @@
   .btn-phone[data-action="release"].on { background: var(--surface-2); color: var(--muted); }
   .btn-phone.confirm { background: var(--off); border-color: var(--off); color: var(--on-accent); }
   .btn-phone .spinner { right: 14px; }
+  .btn-rotate {
+    position: relative; width: 100%; display: flex; align-items: center; gap: 14px; text-align: left;
+    min-height: 60px; padding: 10px 16px; border-radius: 18px;
+    background: var(--surface); border: 1.5px solid var(--border); box-shadow: var(--shadow);
+    transition: transform .08s ease, background .2s, border-color .2s;
+  }
+  .btn-rotate:active { transform: scale(.98); }
+  .btn-rotate:focus-visible { outline: 3px solid var(--ambient); outline-offset: 2px; }
+  .btn-rotate .turn { width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center;
+    background: var(--ambient-soft); color: var(--ambient); transition: transform .3s ease; }
+  .btn-rotate .turn svg { width: 24px; height: 24px; }
+  .btn-rotate.landscape .turn { transform: scaleX(-1); }  /* the arrow points the way the next turn goes */
+  .btn-rotate .name { display: block; font-size: 16px; font-weight: 700; }
+  .btn-rotate .hint { display: block; font-size: 13px; color: var(--muted); }
+  .btn-rotate .orient { margin-left: auto; flex: none; font-size: 12px; font-weight: 700; padding: 4px 10px;
+    border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+  .btn-rotate.landscape .orient { background: var(--ambient-soft); color: var(--ambient); }
+  .btn-rotate.offline { opacity: .5; }
+  .btn-rotate .spinner { right: 16px; }
+  .btn-rotate.pending .orient { visibility: hidden; }
   .btn-phone.pending::after {
     content: ""; position: absolute; inset: 0; border-radius: inherit;
     background: color-mix(in srgb, var(--bg) 35%, transparent);
@@ -322,7 +388,32 @@
       <div class="label">Current mode</div>
       <div class="mode" id="statusMode">—</div>
       <div class="phone" id="phoneState"><span class="dot"></span><span id="phoneText">Phone —</span></div>
-      <div class="phone voice" id="voiceState" hidden><span class="dot"></span><span id="voiceText"></span></div>
+    </div>
+  </section>
+
+  <section class="camera" id="camera" aria-label="Camera">
+    <div class="camera-head">
+      <span class="label"><span class="live" aria-hidden="true"></span>Camera</span>
+      <button class="switch" id="cameraSwitch" role="switch" aria-checked="true"><span>Show</span><i aria-hidden="true"></i></button>
+    </div>
+    <div class="camera-view">
+      <img id="cameraImg" alt="Live view from the robot's camera">
+      <span class="note" id="cameraNote">Connecting to the camera…</span>
+    </div>
+  </section>
+
+  <section class="sound" id="sound" data-kind="" aria-label="Sound">
+    <div class="sound-head">
+      <div class="badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></div>
+      <div><div class="label">Hearing</div><div class="sound-who" id="soundWho" aria-live="polite">—</div></div>
+    </div>
+    <div class="meter" role="meter" aria-label="Sound level" aria-valuemin="0" aria-valuemax="100" id="meter"><div class="meter-fill" id="meterFill"></div></div>
+    <div class="sound-foot">
+      <div class="sound-hint" id="soundHint">Checking the tracker…</div>
+      <div class="sound-switches">
+        <button class="switch" id="micSwitch" role="switch" aria-checked="false"><span>Use this phone's mic</span><i aria-hidden="true"></i></button>
+        <button class="switch" id="followSwitch" role="switch" aria-checked="false"><span>Go to whoever speaks</span><i aria-hidden="true"></i></button>
+      </div>
     </div>
   </section>
 
@@ -340,7 +431,7 @@
       <span class="icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2"/></svg>
       </span>
-      <span><span class="name">Ambient</span><span class="hint" style="display:block">Whole-room view</span></span>
+      <span><span class="name">Ambient</span><span class="hint" style="display:block">Sweep West ↔ East</span></span>
     </button>
     <button class="btn" data-mode="spotlight" aria-pressed="false">
       <span class="spinner" aria-hidden="true"></span>
@@ -348,7 +439,7 @@
       <span class="icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="3"/><path d="M5.5 21c.8-3.6 3.4-6 6.5-6s5.7 2.4 6.5 6"/><path d="M12 1.5v1M4.5 4.5l.8.8M19.5 4.5l-.8.8"/></svg>
       </span>
-      <span><span class="name">Spotlight</span><span class="hint" style="display:block">Face the speaker</span></span>
+      <span><span class="name">Spotlight</span><span class="hint" style="display:block">Follow people</span></span>
     </button>
   </section>
 
@@ -365,6 +456,12 @@
       <span class="spinner" aria-hidden="true"></span>
     </button>
   </section>
+  <button class="btn-rotate" id="rotateBtn" aria-pressed="false">
+    <span class="turn" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></span>
+    <span><span class="name" id="rotateName">Turn to landscape</span><span class="hint" id="rotateHint">↺ counter-clockwise</span></span>
+    <span class="orient" id="orientBadge">Portrait</span>
+    <span class="spinner" aria-hidden="true"></span>
+  </button>
 
   <div class="section-title">Move</div>
   <section class="move" id="move">
@@ -537,25 +634,201 @@
   let moveInFlight = false;
   let repeatTimer = null;
 
+  const followSwitch = document.getElementById("followSwitch");
+
   function renderVoice() {
-    const v = tracker.reachable ? tracker.voice : null;
-    const targets = v ? (v.targets || (v.target ? [v.target] : [])) : [];
-    const line = document.getElementById("voiceState");
-    line.hidden = !targets.length;
-    if (line.hidden) return;
-    const who = targets.join(", ");
-    const following = tracker.voice_following;
-    line.classList.toggle("on", Boolean(following) && !tracker.voice_face_missing);
-    let text;
-    if (v.age === null) text = `Listening for ${who} · waiting for the microphone`;
-    else if (v.age > 5) text = `Listening for ${who} · no audio for ${Math.round(v.age)} s`;
-    else if (following && tracker.voice_face_missing) text = `Heard ${following} · face not enrolled`;
-    else if (following) text = (tracker.motion_blocker || "").startsWith("searching")
-      ? `Heard ${following} · looking for their face` : `Heard ${following} · following`;
-    else if (v.speaker && v.speaker !== "silence") text = `Listening for ${who} · hearing ${v.speaker}`;
-    else text = `Listening for ${who}`;
-    document.getElementById("voiceText").textContent = text;
+    const v = tracker.reachable ? (tracker.voice || {}) : null;
+    const box = document.getElementById("sound");
+    const who = document.getElementById("soundWho");
+    const hint = document.getElementById("soundHint");
+    const fill = document.getElementById("meterFill");
+    const speakerOn = tracker.follow_mode === "speaker";
+    followSwitch.setAttribute("aria-checked", String(speakerOn));
+    followSwitch.disabled = !tracker.reachable;
+    let kind = "", label, level = 0;
+    const live = v && v.age !== null && v.age !== undefined && v.age <= 3;
+    if (!v) label = "—";
+    else if (!live) label = "No microphone";
+    else {
+      if (v.level !== null && v.level !== undefined) level = Math.max(0, Math.min(1, (v.level + 60) / 50));
+      if (v.speaker === "silence") label = "Silent";
+      else if ((v.targets || []).includes(v.speaker)) { label = v.speaker; kind = "us"; }
+      else { label = "Random person"; kind = "person"; }  // includes voices that are still placeholders
+    }
+    box.dataset.kind = kind;
+    who.textContent = label;
+    fill.style.width = `${Math.round(level * 100)}%`;
+    document.getElementById("meter").setAttribute("aria-valuenow", String(Math.round(level * 100)));
+    const going = speakerOn && tracker.active_target && tracker.active_target === tracker.voice_following;
+    hint.classList.toggle("on", Boolean(going));
+    if (!v) hint.textContent = "Tracker offline";
+    else if (!v.targets || !v.targets.length) hint.textContent = "No voices enrolled";
+    else if (phoneMic.problem) hint.textContent = phoneMic.problem;
+    else if (!live && phoneMic.on) hint.textContent = "Phone mic on · waiting for the voice listener";
+    else if (!live) hint.textContent = phoneMic.wanted ? "Tap “Use this phone's mic” to listen again"
+      : "Turn on “Use this phone's mic”";
+    else if (going) hint.textContent = (tracker.motion_blocker || "").startsWith("searching")
+      ? `Looking for ${tracker.active_target}…` : `Going to ${tracker.active_target}`;
+    else if (!speakerOn) hint.textContent = "Voice won't move the arm";
+    else hint.textContent = "Speak and it comes to you";
   }
+
+  // ---- live camera, relayed by the app from the tracker ----
+  const cameraBox = document.getElementById("camera");
+  const cameraImg = document.getElementById("cameraImg");
+  const cameraNote = document.getElementById("cameraNote");
+  const cameraSwitch = document.getElementById("cameraSwitch");
+  let cameraWanted = true, cameraRetry = null;
+  try { cameraWanted = localStorage.getItem("camera") !== "off"; } catch {}
+
+  function cameraConnect() {
+    clearTimeout(cameraRetry);
+    if (!cameraWanted || document.hidden) { cameraImg.removeAttribute("src"); cameraBox.classList.remove("streaming"); return; }
+    cameraNote.textContent = "Connecting to the camera…";
+    cameraNote.hidden = false;
+    cameraImg.src = `/api/stream?t=${Date.now()}`;  // a fresh URL so a dropped stream really reconnects
+  }
+  cameraImg.addEventListener("load", () => { cameraNote.hidden = true; cameraBox.classList.add("streaming"); });
+  cameraImg.addEventListener("error", () => {
+    cameraBox.classList.remove("streaming");
+    cameraNote.hidden = false;
+    cameraNote.textContent = tracker.reachable ? "Camera unavailable — retrying…" : "Camera offline — start ./robot";
+    cameraRetry = setTimeout(cameraConnect, 3000);
+  });
+  function renderCamera() {
+    cameraBox.classList.toggle("hidden", !cameraWanted);
+    cameraSwitch.setAttribute("aria-checked", String(cameraWanted));
+    if (cameraWanted && cameraImg.getAttribute("src") && cameraImg.naturalWidth > 0) {  // frames are arriving
+      cameraNote.hidden = true;
+      cameraBox.classList.add("streaming");
+    }
+  }
+  cameraSwitch.addEventListener("click", () => {
+    cameraWanted = !cameraWanted;
+    try { localStorage.setItem("camera", cameraWanted ? "on" : "off"); } catch {}
+    renderCamera();
+    cameraConnect();
+  });
+  document.addEventListener("visibilitychange", cameraConnect);  // close the stream while the page is hidden
+  renderCamera();
+  cameraConnect();
+
+  // ---- phone microphone -> robot (16 kHz 16-bit mono PCM, posted every 250 ms) ----
+  const micSwitch = document.getElementById("micSwitch");
+  const phoneMic = { on: false, wanted: false, problem: "", stream: null, ctx: null, node: null, timer: null,
+                     wakeLock: null, queue: [], sending: false, lastToast: 0 };
+  try { phoneMic.wanted = localStorage.getItem("phoneMic") === "on"; } catch {}
+
+  function micResample(state, input, rate) {
+    // Box-filter average over each output period: a cheap low-pass plus decimation to 16 kHz.
+    const ratio = rate / 16000;
+    const data = new Float32Array(state.rest.length + input.length);
+    data.set(state.rest); data.set(input, state.rest.length);
+    const out = [];
+    let pos = state.pos;
+    while (pos + ratio <= data.length) {
+      const a = Math.floor(pos), b = Math.max(a + 1, Math.floor(pos + ratio));
+      let sum = 0;
+      for (let i = a; i < b; i++) sum += data[i];
+      const v = Math.max(-1, Math.min(1, sum / (b - a)));
+      out.push(v < 0 ? v * 32768 : v * 32767);
+      pos += ratio;
+    }
+    const keep = Math.floor(pos);
+    state.rest = data.slice(keep);
+    state.pos = pos - keep;
+    return out;
+  }
+
+  async function micFlush() {
+    if (phoneMic.sending || !phoneMic.queue.length) return;
+    let samples = phoneMic.queue.splice(0);
+    if (samples.length > 32000) samples = samples.slice(-32000);  // never fall more than 2 s behind
+    phoneMic.sending = true;
+    try {
+      const res = await fetch("/api/audio", { method: "POST", headers: { "Content-Type": "application/octet-stream" },
+                                              body: new Int16Array(samples).buffer, cache: "no-store" });
+      if (res.status === 204) phoneMic.problem = "";
+      else phoneMic.problem = ((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+    } catch {
+      phoneMic.problem = "Can't reach the robot";
+    } finally {
+      phoneMic.sending = false;
+    }
+  }
+
+  async function micStart() {
+    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showToast("The mic needs the secure https:// address — reopen the app from the QR code");
+      return;
+    }
+    try {
+      phoneMic.stream = await navigator.mediaDevices.getUserMedia({ audio: {
+        channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
+    } catch (err) {
+      showToast(err.name === "NotAllowedError" ? "Microphone permission was denied" : `Couldn't open the mic: ${err.message}`);
+      return;
+    }
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    phoneMic.ctx = new Ctx();
+    await phoneMic.ctx.resume();
+    const source = phoneMic.ctx.createMediaStreamSource(phoneMic.stream);
+    phoneMic.node = phoneMic.ctx.createScriptProcessor(4096, 1, 1);
+    const resampler = { rest: new Float32Array(0), pos: 0 };
+    phoneMic.node.onaudioprocess = e => {
+      const out = micResample(resampler, e.inputBuffer.getChannelData(0), phoneMic.ctx.sampleRate);
+      for (const v of out) phoneMic.queue.push(v);
+    };
+    const mute = phoneMic.ctx.createGain();
+    mute.gain.value = 0;  // the processor must reach the output to run, but nothing should be played
+    source.connect(phoneMic.node); phoneMic.node.connect(mute); mute.connect(phoneMic.ctx.destination);
+    phoneMic.timer = setInterval(micFlush, 250);
+    try { phoneMic.wakeLock = await navigator.wakeLock?.request("screen"); } catch {}  // phones stop the mic when the screen locks
+    phoneMic.on = phoneMic.wanted = true;
+    phoneMic.problem = "";
+    try { localStorage.setItem("phoneMic", "on"); } catch {}
+  }
+
+  function micStop(remember = true) {
+    clearInterval(phoneMic.timer);
+    phoneMic.node?.disconnect();
+    phoneMic.stream?.getTracks().forEach(t => t.stop());
+    phoneMic.ctx?.close();
+    phoneMic.wakeLock?.release?.().catch?.(() => {});
+    Object.assign(phoneMic, { on: false, stream: null, ctx: null, node: null, timer: null, wakeLock: null, queue: [], problem: "" });
+    if (remember) {
+      phoneMic.wanted = false;
+      try { localStorage.setItem("phoneMic", "off"); } catch {}
+    }
+  }
+
+  micSwitch.addEventListener("click", async () => {
+    navigator.vibrate?.(10);
+    if (phoneMic.on) micStop(); else await micStart();
+    micSwitch.setAttribute("aria-checked", String(phoneMic.on));
+    renderVoice();
+  });
+  document.addEventListener("visibilitychange", async () => {
+    if (document.hidden || !phoneMic.on) return;
+    try { await phoneMic.ctx.resume(); } catch {}
+    try { phoneMic.wakeLock = await navigator.wakeLock?.request("screen"); } catch {}
+  });
+
+  followSwitch.addEventListener("click", async () => {
+    const mode = tracker.follow_mode === "speaker" ? "manual" : "speaker";
+    navigator.vibrate?.(10);
+    try {
+      const data = await request("/api/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode }),
+      });
+      tracker.follow_mode = data.follow_mode;
+      renderVoice();
+    } catch (err) {
+      showToast(`Couldn't change voice following: ${err.message}`);
+    }
+  });
 
   const peopleBox = document.getElementById("people");
   let shownFaces = "";
@@ -618,6 +891,39 @@
       showToast(err.name === "AbortError" ? "No response from the arm controller" : `Couldn't go to ${name}: ${err.message}`);
     }
   }
+
+  const rotateBtn = document.getElementById("rotateBtn");
+  let rotateUntil = 0;
+
+  function renderRotate() {
+    const landscape = tracker.orientation === "landscape";
+    const turning = Date.now() < rotateUntil;
+    rotateBtn.classList.toggle("landscape", landscape);
+    rotateBtn.classList.toggle("pending", turning);
+    rotateBtn.classList.toggle("offline", !tracker.reachable || deactivated === true);
+    rotateBtn.setAttribute("aria-pressed", String(landscape));
+    document.getElementById("orientBadge").textContent = landscape ? "Landscape" : "Portrait";
+    document.getElementById("rotateName").textContent = turning ? "Turning…" : landscape ? "Turn back to portrait" : "Turn to landscape";
+    document.getElementById("rotateHint").textContent = landscape ? "↻ clockwise" : "↺ counter-clockwise";
+  }
+
+  rotateBtn.addEventListener("click", async () => {
+    if (!tracker.reachable) { showToast("The tracker isn't reachable from the controller"); return; }
+    if (deactivated) { showToast("The arm is deactivated — tap Activate first"); return; }
+    if (Date.now() < rotateUntil) return;
+    const orientation = tracker.orientation === "landscape" ? "portrait" : "landscape";
+    navigator.vibrate?.(12);
+    try {
+      await request("/api/orientation", { method: "POST", headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ orientation }) });
+      rotateUntil = Date.now() + 1800;  // the wrist takes about 1.5 s to turn
+      tracker.orientation = orientation;
+      renderRotate();
+      setTimeout(renderRotate, 1900);
+    } catch (err) {
+      showToast(`Couldn't rotate the phone: ${err.message}`);
+    }
+  });
 
   function renderMove() {
     const unavailable = !tracker.reachable || deactivated === true;
@@ -736,26 +1042,29 @@
     }
   }
 
+  // A bug in one section must not blank the others or masquerade as a lost connection.
+  function safely(fn, ...args) {
+    try { fn(...args); } catch (err) { console.error(`${fn.name} failed:`, err); }
+  }
+
   async function poll() {
+    let data;
     try {
-      const data = await request("/api/status");
-      setConnected(true);
-      if (!busy && data.mode !== currentMode) render(data.mode);
-      if (!busy && data.held !== held) renderPhone(data.held);
-      tracker = data.tracker || { reachable: false };
-      if (data.deactivated !== deactivated) renderMaster(data.deactivated);
-      renderMove();
-      renderVoice();
-      renderPeople();
-      renderTest();
+      data = await request("/api/status");
     } catch {
       setConnected(false);
       tracker = { reachable: false };
-      renderTest();
-      renderMove();
-      renderVoice();
-      renderPeople();
+      for (const fn of [renderTest, renderMove, renderVoice, renderPeople, renderRotate]) safely(fn);
+      return;
     }
+    setConnected(true);
+    if (!busy && data.mode !== currentMode) safely(render, data.mode);
+    if (!busy && data.held !== held) safely(renderPhone, data.held);
+    const turningTo = Date.now() < rotateUntil ? tracker.orientation : null;
+    tracker = data.tracker || { reachable: false };
+    if (turningTo) tracker.orientation = turningTo;  // show the new orientation while the wrist is still turning
+    if (data.deactivated !== deactivated) safely(renderMaster, data.deactivated);
+    for (const fn of [renderMove, renderVoice, renderPeople, renderTest, renderRotate, renderCamera]) safely(fn);
   }
 
   async function sendMode(mode, button) {
@@ -834,7 +1143,7 @@
   setInterval(() => { if (Date.now() < testUntil + 1000) renderTest(); }, 500);
 
   poll();
-  setInterval(poll, 2000);
+  setInterval(poll, 700);  // fast enough for the sound meter
   document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
 </script>
 </body>

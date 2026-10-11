@@ -12,8 +12,12 @@ _encoder = None
 def _get_encoder():
     global _encoder
     if _encoder is None:
+        import torch
         from resemblyzer import VoiceEncoder
 
+        # One 1.5 s window twice a second needs very little CPU. By default PyTorch spins up a thread per
+        # core, which on this 32-core machine burned ~14 cores and slowed the tracker; 2 threads is enough.
+        torch.set_num_threads(config.EMBED_THREADS)
         _encoder = VoiceEncoder(device="cpu")
     return _encoder
 

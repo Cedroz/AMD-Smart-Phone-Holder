@@ -36,9 +36,9 @@ def main():
     url = args.tracker_url.rstrip("/") + "/voice"
     last_error, last_print = None, None
     try:
-        for speaker, confidence, _ in speaker_stream(args.device, local_mic=args.local_mic):
+        for speaker, confidence, _, level in speaker_stream(args.device, local_mic=args.local_mic, levels=True):
             try:
-                post(url, {"speaker": speaker, "confidence": round(float(confidence), 3)})
+                post(url, {"speaker": speaker, "confidence": round(float(confidence), 3), "level": round(level, 1)})
                 last_error = None
             except (urllib.error.URLError, OSError) as error:
                 if str(error) != last_error:  # the tracker may be restarting; say so once

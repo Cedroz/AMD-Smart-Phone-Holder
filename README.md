@@ -4,6 +4,21 @@ FollowMe uses a LeRobot SO-101 follower and two cameras to select viewing positi
 for a phone. Hardware feasibility and movement validation are tracked in
 [the phase specifications](artifacts/PLAN.md).
 
+## Run it
+
+From the repository root, in two terminals:
+
+```bash
+./robot   # the arm: tracking, gestures, voice, Go to, Ambient
+./app     # the phone app: scan the QR code it prints
+```
+
+Each command restarts itself if an older copy is running. `./robot --dry-run` runs everything
+without moving the motors. For voice, turn on "Use this phone's mic" in the app: the phone streams
+its microphone to the robot. The app uses HTTPS with a self-signed certificate (phones only allow
+the microphone on secure pages), so accept the browser's warning on the first visit.
+`acoustic/mac_mic_sender.py` still works as an alternative microphone.
+
 ## Phase 1 environment setup
 
 The runtime uses Python 3.12 and LeRobot 0.6.1 with `opencv-python-headless`.

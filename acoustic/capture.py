@@ -183,6 +183,8 @@ class TCPAudioCapture(AudioCapture):
             finally:
                 client.close()
                 self.client = None
+                # A disconnected sender must not replay its final speech window forever.
+                self.buffer = AudioRingBuffer()
 
     def stop(self):
         self._stop_event.set()

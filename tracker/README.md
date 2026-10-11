@@ -1,5 +1,38 @@
 # Named face recognition
 
+## Manual and speaker following
+
+The camera page on port 8000 has **Manual / Go to** and **Follow speaker** buttons.
+It also lists enrolled people under **Go to a person**. Click a name to select
+them, or **Clear selection** to remove the manual target; this uses the same
+`/find` endpoint as the mobile Go to controls. New face enrollments appear in the
+list automatically.
+Manual is the default: the existing mobile Go to selection controls the target,
+and voice results do not switch it. Speaker mode starts with that selection and
+switches to a recognized speaker whose face is enrolled. A mobile Go to tap still
+selects someone immediately; the next accepted speaker result can override it.
+
+Speaker mode starts the existing acoustic voice bridge if needed. The page shows
+the selected person, active target, latest speaker, and whether the listener is
+connected, waiting for audio, or failed. The laptop microphone still needs the
+sender and SSH tunnel described in `acoustic/README.md`; local microphones use
+the existing `--voice-local-mic DEVICE` option. The listener stays running when
+switching back to Manual, which ignores its target updates.
+The page includes laptop microphone setup commands and explains missing audio,
+silence, unknown voices, low match scores, and missing face enrollments. If the
+listener fails, click **Follow speaker** again to retry it.
+
+With no `--voice` list, speaker names are read from `acoustic/voiceprints.npz`.
+An explicit `--voice NAME ...` limits eligible speakers. Face and voice labels
+must match exactly. Scores below 0.5, unknown speakers, and speakers without an
+enrolled face cannot switch the target. Silence retains the last accepted
+speaker for `--voice-hold` seconds (default 4); after expiry the tracker returns
+to the mobile selection, or holds if none is selected. Freeze, Deactivate, and
+enrollment continue to block tracking motion.
+
+`POST /follow` accepts `{"mode":"manual"}` or `{"mode":"speaker"}`. The mobile
+UI and `/find` endpoint remain unchanged. Restart the tracker to load these controls.
+
 ## Enroll from the camera preview
 
 Open `http://<arm-ip>:8000/` while `tracker/track.py` is running. Under the

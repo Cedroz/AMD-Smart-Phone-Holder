@@ -1,4 +1,5 @@
 import socket
+import time
 import unittest
 
 import numpy as np
@@ -16,6 +17,25 @@ class AudioRingBufferTests(unittest.TestCase):
 
 
 class TCPAudioCaptureTests(unittest.TestCase):
+    def test_disconnect_discards_cached_audio_and_accepts_reconnection(self):
+        capture = TCPAudioCapture(port=0).start()
+        self.addCleanup(capture.stop)
+        address = ("127.0.0.1", capture.server.getsockname()[1])
+        client = socket.create_connection(address)
+        buffer = capture.buffer
+        client.sendall(np.full(2400, 16384, dtype="<i2").tobytes())
+        self.assertTrue(buffer.updated.wait(2))
+        client.close()
+        deadline = time.monotonic() + 2
+        while capture.buffer is buffer and time.monotonic() < deadline:
+            time.sleep(.01)
+        self.assertIsNone(capture.buffer.latest(2400))
+        with socket.create_connection(address) as client:
+            buffer = capture.buffer
+            client.sendall(np.full(2400, 8192, dtype="<i2").tobytes())
+            self.assertTrue(buffer.updated.wait(2))
+            np.testing.assert_allclose(buffer.latest(2400), .25)
+
     def test_receives_16_bit_pcm_into_audio_buffer(self):
         capture = TCPAudioCapture(port=0).start()
         client = socket.create_connection(("127.0.0.1", capture.server.getsockname()[1]))
