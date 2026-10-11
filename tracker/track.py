@@ -1476,15 +1476,22 @@ def run(args):
         rotate_by = args.rotate_deg if abs(roll_home + args.rotate_deg) <= 170 else -args.rotate_deg
         rotated = False  # phone turned 90 deg from where it started
 
-        def release(reason):
-            nonlocal held, pull_warned
-            log.info(f"Releasing phone ({reason})")
-            drive_gripper(robot, grip_home + args.gripper_open_sign * args.release_amount,
-                          args.grip_move_torque, args.grip_torque)
+        open_at = None  # where the gripper was last opened to, so Release can open it further
+
+        def release(reason, further=False):
+            """Open the gripper; with further=True (Release pressed again) open it wider from where it is."""
+            nonlocal held, pull_warned, open_at
+            start = open_at if further and open_at is not None else grip_home
+            step = args.release_step if further else args.release_amount
+            target = float(np.clip(start + args.gripper_open_sign * step, GRIP_END_MARGIN, 100.0 - GRIP_END_MARGIN))
+            log.info(f"{'Opening the gripper further' if further else 'Releasing phone'} ({reason})")
+            pos, _ = drive_gripper(robot, target, args.grip_move_torque, args.grip_torque)
+            open_at = pos if pos is not None else target
             held, pull_warned = False, False
 
         def grip():
-            nonlocal held, grip_home
+            nonlocal held, grip_home, open_at
+            open_at = None
             # Close at full speed but only holding force, so stopping on the phone (or a finger) never
             # stalls the servo hard enough to trip its overload protection; then press lightly.
             pos, blocked = drive_gripper(robot, gripper_closed, args.grip_torque, args.grip_torque)
@@ -1616,6 +1623,18 @@ def run(args):
                         except BUS_ERRORS as e:
                             log.error(f"Release failed: {e}")
                             result = f"failed: gripper error ({e})"
+                    elif cmd == "release" and not held:
+                        # Already released: each extra press opens the gripper wider, up to fully open.
+                        fully_open = 100.0 - GRIP_END_MARGIN if args.gripper_open_sign > 0 else GRIP_END_MARGIN
+                        if open_at is not None and abs(open_at - fully_open) < 2.0:
+                            result = "already fully open"
+                        else:
+                            try:
+                                release("command", further=True)
+                                result = f"opened further (gripper at {open_at:.0f})"
+                            except BUS_ERRORS as e:
+                                log.error(f"Release failed: {e}")
+                                result = f"failed: gripper error ({e})"
                     elif cmd == "grip" and not held:
                         try:
                             grip()
@@ -2110,6 +2129,8 @@ def main():
     p.add_argument("--contact-load", type=float, default=80.0,
                    help="stop squeezing once the gripper feels this much push-back (of 1000)")
     p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
+    p.add_argument("--release-step", type=float, default=20.0,
+                   help="how much further each extra Release press opens the gripper (0-100 scale)")
     p.add_argument("--grip-move-torque", type=float, default=50.0,
                    help="gripper force while opening, %% of max (50 = LeRobot's cap); closing and holding use --grip-torque")
     p.add_argument("--test-motion-scale", type=float, default=1.0,
