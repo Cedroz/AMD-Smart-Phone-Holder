@@ -1476,20 +1476,20 @@ def run(args):
         rotate_by = args.rotate_deg if abs(roll_home + args.rotate_deg) <= 170 else -args.rotate_deg
         rotated = False  # phone turned 90 deg from where it started
 
-        open_at = None  # where the gripper was last opened to, so Release can open it further
+        gripper_open = 100.0 - GRIP_END_MARGIN if args.gripper_open_sign > 0 else GRIP_END_MARGIN
+        open_at = None  # where the gripper last opened to (fully open unless something blocked it)
 
-        def release(reason, further=False):
-            """Open the gripper; with further=True (Release pressed again) open it wider from where it is."""
+        def release(reason):
+            """Open the claw all the way, from closed or from holding the phone."""
             nonlocal held, pull_warned, open_at
-            start = open_at if further and open_at is not None else grip_home
-            step = args.release_step if further else args.release_amount
-            target = float(np.clip(start + args.gripper_open_sign * step, GRIP_END_MARGIN, 100.0 - GRIP_END_MARGIN))
-            log.info(f"{'Opening the gripper further' if further else 'Releasing phone'} ({reason})")
-            pos, _ = drive_gripper(robot, target, args.grip_move_torque, args.grip_torque)
-            open_at = pos if pos is not None else target
+            log.info(f"Releasing phone ({reason})")
+            pos, _ = drive_gripper(robot, gripper_open, args.grip_move_torque, args.grip_torque)
+            open_at = pos if pos is not None else gripper_open
             held, pull_warned = False, False
 
         def grip():
+            """Close the claw at holding force only: it stops on a phone and holds it gently, or closes
+            all the way if the jaws are empty. Returns True if it stopped on something."""
             nonlocal held, grip_home, open_at
             open_at = None
             # Close at full speed but only holding force, so stopping on the phone (or a finger) never
@@ -1506,6 +1506,7 @@ def run(args):
             if pull:
                 pull.reset()
             held = True
+            return blocked
 
         def nudge(direction):
             """D-pad: move one step and take over from tracking, which stays paused until `resume`.
@@ -1615,35 +1616,23 @@ def run(args):
                         result = "ignored: dry run"
                     elif not args.gripper_open_sign:
                         result = "ignored: gripper direction is not configured"
-                    elif cmd == "release" and held:
-                        try:
-                            release("command")
-                            control.requested_reach = control.reach
-                            result = "applied"
-                        except BUS_ERRORS as e:
-                            log.error(f"Release failed: {e}")
-                            result = f"failed: gripper error ({e})"
-                    elif cmd == "release" and not held:
-                        # Already released: each extra press opens the gripper wider, up to fully open.
-                        fully_open = 100.0 - GRIP_END_MARGIN if args.gripper_open_sign > 0 else GRIP_END_MARGIN
-                        if open_at is not None and abs(open_at - fully_open) < 2.0:
+                    elif cmd == "release":
+                        if not held and open_at is not None and abs(open_at - gripper_open) < 2.0:
                             result = "already fully open"
                         else:
                             try:
-                                release("command", further=True)
-                                result = f"opened further (gripper at {open_at:.0f})"
+                                release("command")
+                                control.requested_reach = control.reach
+                                result = "applied: claw fully open"
                             except BUS_ERRORS as e:
                                 log.error(f"Release failed: {e}")
                                 result = f"failed: gripper error ({e})"
-                    elif cmd == "grip" and not held:
+                    else:  # grip: always close, also when already holding (re-grips the phone)
                         try:
-                            grip()
-                            result = "applied"
+                            result = "applied: holding the phone" if grip() else "applied: claw closed (nothing in it)"
                         except BUS_ERRORS as e:
                             log.error(f"Grip failed: {e}")
                             result = f"failed: gripper error ({e})"
-                    else:
-                        result = "already applied"
                 elif cmd in control.DPAD:
                     if control.deactivated:
                         result = "ignored: deactivated"
@@ -2124,13 +2113,12 @@ def main():
                    help="direction that opens the gripper (+1 measured on this arm with --test-gripper)")
     p.add_argument("--squeeze", type=float, default=6.0,
                    help="on start, close the gripper up to this much past where it is so it grips firmly (0 = off)")
-    p.add_argument("--grip-torque", type=float, default=20.0,
-                   help="max gripper force while tracking, %% of the motor's max (LeRobot default is 50)")
+    p.add_argument("--grip-torque", type=float, default=40.0,
+                   help="gripper force for closing and holding, %% of the motor's max (LeRobot's cap is 50); "
+                        "lower it if the gripper motor overheats or drops out")
     p.add_argument("--contact-load", type=float, default=80.0,
                    help="stop squeezing once the gripper feels this much push-back (of 1000)")
     p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
-    p.add_argument("--release-step", type=float, default=20.0,
-                   help="how much further each extra Release press opens the gripper (0-100 scale)")
     p.add_argument("--grip-move-torque", type=float, default=50.0,
                    help="gripper force while opening, %% of max (50 = LeRobot's cap); closing and holding use --grip-torque")
     p.add_argument("--test-motion-scale", type=float, default=1.0,
