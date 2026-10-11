@@ -2,9 +2,9 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-from followme.gestures import (DOWN, FREEZE, LANDSCAPE, PARTY, PORTRAIT, RESUME,
+from followme.gestures import (FREEZE, LOWER, LANDSCAPE, PARTY, PORTRAIT, RESUME,
                                GestureInterpreter, GesturePipeline, GestureZone, HandObservation, LSignDetector,
-                               PointDetector, TwoPalmsDetector, UP, hand_shape, l_shape, pointing)
+                               PointDetector, RAISE, TwoPalmsDetector, hand_shape, l_shape, pointing)
 from followme.phase5.replay import Clock
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -298,17 +298,17 @@ class PointDetectorTests(unittest.TestCase):
 
     def test_point_up_raises_and_repeats_while_held(self):
         self.assertEqual(self.feed([pointer('up')], .4), [])
-        self.assertEqual(self.feed([pointer('up')], 1.6), [UP] * 4)
+        self.assertEqual(self.feed([pointer('up')], 1.6), [RAISE] * 15)  # ten steps a second after the hold
         self.assertEqual(self.feed([], 1), [])
 
     def test_point_down_lowers(self):
-        self.assertEqual(self.feed([pointer('down')], 1), [DOWN, DOWN])
+        self.assertEqual(self.feed([pointer('down')], 1), [LOWER] * 5)
 
     def test_brief_point_is_ignored(self):
         self.assertEqual(self.feed([pointer('up')], .3) + self.feed([], .5), [])
 
     def test_switching_direction_restarts_hold(self):
-        self.assertEqual(self.feed([pointer('up')], .7) + self.feed([pointer('down')], .3), [UP])
+        self.assertEqual(self.feed([pointer('up')], .7) + self.feed([pointer('down')], .3), [RAISE] * 2)
 
     def test_hand_outside_zone_is_ignored(self):
         self.assertEqual(self.feed([pointer('up', y=.9)], 2), [])
@@ -320,7 +320,7 @@ class PointDetectorTests(unittest.TestCase):
             command = pipeline.update(hands, self.clock(), FACE)
             if command:
                 commands.append(command)
-        self.assertEqual(set(commands), {UP})
+        self.assertEqual(set(commands), {RAISE})
 
 
 def two_palms(spread=.25):
@@ -349,6 +349,21 @@ class TwoPalmsTests(unittest.TestCase):
         detector = TwoPalmsDetector()
         self.assertEqual(self.feed(detector, two_palms(), 2) + self.feed(detector, [], 1)
                          + self.feed(detector, two_palms(), 2), [])
+
+    def test_open_hands_count_even_if_mediapipe_is_unsure(self):
+        unsure = [HandObservation('None', .3, x, .4, 2., 'up') for x in (.3, .7)]
+        self.assertEqual(self.feed(TwoPalmsDetector(), unsure, 3), [PARTY])
+
+    def test_fists_do_not_count(self):
+        fists = [HandObservation('Closed_Fist', .9, x, .4, 1., 'up') for x in (.3, .7)]
+        self.assertEqual(self.feed(TwoPalmsDetector(), fists, 3), [])
+
+    def test_progress_for_the_countdown(self):
+        detector = TwoPalmsDetector()
+        self.feed(detector, two_palms(), 1.25)
+        self.assertAlmostEqual(detector.progress(self.clock()), .5, delta=.05)
+        self.feed(detector, two_palms(), 2)
+        self.assertIsNone(detector.progress(self.clock()))  # fired
 
     def test_one_palm_is_not_party(self):
         self.assertEqual(self.feed(TwoPalmsDetector(), [palm()], 4), [])

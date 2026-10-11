@@ -7,7 +7,7 @@ shoulder_pan (left/right) and optionally wrist_flex (up/down) to re-center them.
 The preview also serves POST /commands and GET /status (Rotate 90 and Party mode
 buttons included). Optional --gestures
 uses the separate vision environment for closer/farther/freeze/resume commands (pointing the index
-finger up/down raises/lowers the phone; thumbs up resumes following afterwards); an L sign with the left hand rotates the phone
+finger up/down raises/lowers the phone smoothly; thumbs up resumes following afterwards); an L sign with the left hand rotates the phone
 to landscape, with the right hand back to portrait; both palms up for 2.5 s starts Party mode.
 Optional --distance maintains an approximate calibrated camera-to-user distance.
 Cover the camera with your hand for 2 s to release the phone (Grip phone puts it back).
@@ -343,7 +343,8 @@ def create_api(control, preview=None):
 
     @app.post("/commands", status_code=202)
     def command(command: Literal["closer", "farther", "freeze", "resume", "release", "grip", "test_motion",
-                                 "deactivate", "activate", "up", "down", "left", "right", "rotate", "party", "home", "landscape", "portrait"] = Body(embed=True)):
+                                 "deactivate", "activate", "up", "down", "left", "right", "rotate", "party", "home", "landscape", "portrait",
+                                 "raise", "lower"] = Body(embed=True)):
         try:
             control.submit(command)
         except queue.Full:
@@ -1144,8 +1145,9 @@ class TrackerControl:
     grip stay available so the phone can still be taken out.
     """
     COMMANDS = ("closer", "farther", "freeze", "resume", "release", "grip", "test_motion", "deactivate", "activate",
-                "up", "down", "left", "right", "rotate", "party", "home", "landscape", "portrait")
-    DPAD = ("up", "down", "left", "right", "rotate", "party", "home", "landscape", "portrait")
+                "up", "down", "left", "right", "rotate", "party", "home", "landscape", "portrait", "raise", "lower")
+    # raise/lower are what pointing up/down sends: small up/down steps, many per second.
+    DPAD = ("up", "down", "left", "right", "rotate", "party", "home", "landscape", "portrait", "raise", "lower")
 
     def __init__(self, args):
         self.args = args
@@ -1506,6 +1508,13 @@ def run(args):
             when there is no IK.
             """
             nonlocal pan_goal, tilt_goal, z_goal
+            # Pointing sends raise/lower about ten times a second: same as up/down, in small steps,
+            # so the phone glides like --raise instead of jumping.
+            fine = direction in ("raise", "lower")
+            if fine:
+                direction = "up" if direction == "raise" else "down"
+            height_step = args.point_height_step if fine else args.dpad_height_step
+            tilt_step = args.point_tilt_step if fine else args.dpad_tilt_step
             control.frozen = True  # otherwise tracking would immediately undo the move
             control.requested_reach = control.reach
             if direction in ("left", "right"):
@@ -1520,7 +1529,7 @@ def run(args):
             up = 1 if direction == "up" else -1
             if hik:
                 start = z_goal
-                target = float(np.clip(start + up * args.dpad_height_step,
+                target = float(np.clip(start + up * height_step,
                                        hik.z0 - args.height_down, hik.z0 + args.height_up))
                 steps = max(1, int(np.ceil(abs(target - start) / 0.004)))
                 for i in range(1, steps + 1):
@@ -1536,7 +1545,7 @@ def run(args):
                     return "ignored: can't move further that way"
                 return "applied" if abs(z_goal - target) < 1e-4 else f"partly applied ({moved * 100:+.1f} cm)"
             # Positive tilt points the camera down (see --test-tilt).
-            new = float(np.clip(tilt_goal - up * args.tilt_sign * args.dpad_tilt_step,
+            new = float(np.clip(tilt_goal - up * args.tilt_sign * tilt_step,
                                 tilt_home - args.tilt_limit, tilt_home + args.tilt_limit))
             if new == tilt_goal:
                 return "ignored: at the tilt limit"
@@ -1766,6 +1775,9 @@ def run(args):
                         raise RuntimeError(reply["error"])
                     feedback = reply.get("gesture", {})
                     control.publish(gesture=feedback)
+                    if feedback.get("party_progress"):
+                        cv2.putText(frame, f'PARTY {feedback["party_progress"] * 2.5:.1f} / 2.5 s', (10, 30),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 255), 2)
                     for hand in feedback.get("hands", []):
                         point = (int(hand["x"] * w), int(hand["y"] * h))
                         color = (0, 255, 0) if hand["in_zone"] else (0, 160, 255)
@@ -2120,6 +2132,10 @@ def main():
     p.add_argument("--dpad-pan-step", type=float, default=8.0, help="D-pad left/right: degrees per press")
     p.add_argument("--dpad-height-step", type=float, default=0.015, help="D-pad up/down: metres per press (height IK)")
     p.add_argument("--dpad-tilt-step", type=float, default=5.0, help="D-pad up/down without height IK: wrist degrees")
+    p.add_argument("--point-height-step", type=float, default=0.004,
+                   help="pointing up/down: metres per step, about ten steps a second (height IK)")
+    p.add_argument("--point-tilt-step", type=float, default=1.5,
+                   help="pointing up/down without height IK: wrist degrees per step")
     p.add_argument("--tilt-limit", type=float, default=25.0, help="max degrees up/down of the start pose")
     p.add_argument("--smoothing", type=float, default=0.5, help="0 = raw detections, closer to 1 = smoother")
     p.add_argument("--lost-timeout", type=float, default=2.0, help="seconds before forgetting a lost person")

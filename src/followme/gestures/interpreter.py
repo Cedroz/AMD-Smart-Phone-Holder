@@ -134,10 +134,21 @@ class TwoPalmsDetector:
         """True while two palms are (or were just) up, so the single-palm freeze can be suppressed."""
         return self._last_seen is not None and now - self._last_seen <= self.grace_s
 
+    def _open(self, hand):
+        # MediaPipe's label is often unsure about the second, further-out hand; a clearly open hand
+        # with the fingers up counts too.
+        return ((hand.label == 'Open_Palm' and hand.score >= self.min_score)
+                or ((hand.openness or 0) >= 1.7 and hand.fingers == 'up'))
+
+    def progress(self, now):
+        """Fraction of the hold done while two palms are up (for an on-screen countdown), else None."""
+        if self._since is None or self._fired:
+            return None
+        return min(1., (now - self._since) / self.hold_s)
+
     def update(self, hands, now, face_center=None):
         """Feed one frame's hands; returns 'party' or None."""
-        palms = [hand for hand in hands if hand.label == 'Open_Palm' and hand.score >= self.min_score
-                 and self.zone.contains(hand, face_center)]
+        palms = [hand for hand in hands if self._open(hand) and self.zone.contains(hand, face_center)]
         if len(palms) < 2:
             if self._last_seen is not None and now - self._last_seen > self.grace_s:
                 self._since = self._last_seen = None

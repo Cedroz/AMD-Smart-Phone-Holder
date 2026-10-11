@@ -103,7 +103,8 @@ def main():
                              'openness': hand.openness, 'hand': hand.hand, 'l_shape': hand.l_shape,
                              'pointing': hand.pointing,
                              'in_zone': pipeline.interpreter.zone.contains(hand, face)}
-                             for hand in hands], 'pending': pipeline.interpreter.pending(now), 'command': command}
+                             for hand in hands], 'pending': pipeline.interpreter.pending(now),
+                            'party_progress': pipeline.two_palms.progress(now), 'command': command}
                 channel.send({'type': 'result', **identity, 'command': command, 'gesture': feedback, 'error': None})
             except Exception as exc:
                 channel.send({'type': 'result', **identity, 'error': f'{type(exc).__name__}: {exc}'})

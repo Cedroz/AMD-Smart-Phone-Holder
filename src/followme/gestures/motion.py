@@ -4,8 +4,8 @@ import math
 
 from followme.gestures.interpreter import GestureZone
 
-UP = 'up'
-DOWN = 'down'
+RAISE = 'raise'
+LOWER = 'lower'
 WRIST, MIDDLE_KNUCKLE = 0, 9
 KNUCKLES = (5, 9, 13, 17)
 FINGERTIPS = (8, 12, 16, 20)
@@ -83,13 +83,14 @@ def l_shape(points, aspect=1.):
 
 
 class PointDetector:
-    """Pointing the index finger up raises the phone ('up'), pointing down lowers it ('down').
+    """Pointing the index finger up raises the phone ('raise'), pointing down lowers it ('lower').
 
-    The first step comes after `hold_s`, then one every `repeat_s` while the point is held, so the
-    phone keeps moving until the hand drops. Gaps shorter than `grace_s` don't stop it.
+    The first step comes after `hold_s`, then one every `repeat_s` while the point is held; the
+    tracker moves a few millimetres per step, so the phone glides until the hand drops. Gaps
+    shorter than `grace_s` don't stop it.
     """
 
-    def __init__(self, hold_s=.5, repeat_s=.4, grace_s=.2, zone=None):
+    def __init__(self, hold_s=.5, repeat_s=.1, grace_s=.2, zone=None):
         self.hold_s, self.repeat_s, self.grace_s = hold_s, repeat_s, grace_s
         self.zone = zone or GestureZone()
         self._reset()
@@ -102,20 +103,20 @@ class PointDetector:
         return self._last_seen is not None and now - self._last_seen <= self.grace_s
 
     def update(self, hands, now, face_center=None):
-        """Feed one frame's hands; returns 'up', 'down' or None."""
+        """Feed one frame's hands; returns 'raise', 'lower' or None."""
         valid = [hand for hand in hands if hand.pointing in ('up', 'down') and self.zone.contains(hand, face_center)]
         if not valid:
             if self._last_seen is not None and now - self._last_seen > self.grace_s:
                 self._reset()
             return None
-        direction = UP if max(valid, key=lambda hand: hand.score).pointing == 'up' else DOWN
+        direction = RAISE if max(valid, key=lambda hand: hand.score).pointing == 'up' else LOWER
         if direction != self._direction:
             self._reset()
             self._direction, self._since = direction, now
         self._last_seen = now
         if now - self._since < self.hold_s:
             return None
-        if self._last_step is not None and now - self._last_step < self.repeat_s:
+        if self._last_step is not None and now - self._last_step < self.repeat_s - 1e-6:  # float-safe
             return None
         self._last_step = now
         return direction
