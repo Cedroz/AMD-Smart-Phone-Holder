@@ -8,6 +8,7 @@ The preview also serves POST /commands and GET /status (Rotate 90 and Party mode
 buttons included). Optional --gestures
 uses the separate vision environment for closer/farther/freeze/resume commands.
 Optional --distance maintains an approximate calibrated camera-to-user distance.
+Cover the camera with your hand for 2 s to release the phone (Grip phone puts it back).
 
 Run on the arm, inside the `lerobot` conda env:
 
@@ -20,6 +21,7 @@ Live preview: open http://<arm-ip>:8000 in a browser on your laptop.
 """
 
 import argparse
+import atexit
 import glob
 import logging
 import os
@@ -103,6 +105,9 @@ class Camera:
         self.running = True
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.thread.start()
+        # However the program ends (even a crash during startup), stop the reader thread first: if
+        # Python exits while it's inside OpenCV, it aborts with "FATAL: exception not rethrown".
+        atexit.register(self.close)
 
     def _loop(self):
         while self.running:
@@ -128,8 +133,10 @@ class Camera:
         # Let the reader thread finish its current read before releasing the device; releasing it
         # mid-read crashes OpenCV ("terminate called without an active exception") and can leave the
         # camera stuck so the next run can't open it.
+        if not self.running:
+            return
         self.running = False
-        self.thread.join(timeout=2.0)
+        self.thread.join(timeout=3.0)
         self.cap.release()
 
 
@@ -379,6 +386,12 @@ class Preview:
         self.thread.join(timeout=2)
 
 
+def picture_detail(frame):
+    """How much detail the picture has (grey-level spread). A hand over the lens gives a few; a room 40+."""
+    small = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), (80, 60))
+    return float(small.std())
+
+
 def annotate(frame, boxes, target, aim, deadband, status):
     h, w = frame.shape[:2]
     db = int(deadband * w / 2)
@@ -419,8 +432,33 @@ def find_follower_port():
     raise RuntimeError("No port matched the follower calibration. Pass --port explicitly (see lerobot-find-port).")
 
 
+def other_users_of(device):
+    """PIDs + command lines of other processes that have `device` open (Linux /proc scan)."""
+    target = os.path.realpath(device)
+    found = []
+    for pid in filter(str.isdigit, os.listdir("/proc") if os.path.isdir("/proc") else []):
+        if int(pid) == os.getpid():
+            continue
+        try:
+            fds = os.listdir(f"/proc/{pid}/fd")
+            if any(os.path.realpath(f"/proc/{pid}/fd/{fd}") == target for fd in fds):
+                with open(f"/proc/{pid}/cmdline", "rb") as f:
+                    found.append(f"{pid}: {f.read().replace(b'\0', b' ').decode(errors='replace').strip()}")
+        except OSError:
+            continue
+    return found
+
+
 def connect_arm(port):
     from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
+
+    # Two programs driving the arm at once fight over it (garbled packets, joints yanked both ways).
+    others = other_users_of(port)
+    if others:
+        raise RuntimeError(
+            "Another program is already using the arm, so we'd be fighting it:\n  " + "\n  ".join(others)
+            + "\nStop it first (kill <PID>), after checking with whoever started it."
+        )
 
     config = SO101FollowerConfig(
         port=port,
@@ -450,13 +488,41 @@ def connect_arm(port):
 
 def disconnect_arm(robot, args):
     """Disconnect, leaving the arm holding its pose but the gripper motor off so it can be opened by hand."""
+    port = robot.config.port
     if not args.keep_grip:
-        try:
-            robot.bus.disable_torque(GRIP, num_retry=3)
-            log.info("Gripper motor off: you can open it by hand (use --keep-grip to keep it clamped)")
-        except ConnectionError as e:
-            log.warning(f"Couldn't switch the gripper off ({e})")
-    robot.disconnect()
+        # Read it back and retry: a garbled bus packet can drop the command and leave the clamp locked.
+        for attempt in range(5):
+            try:
+                robot.bus.disable_torque(GRIP, num_retry=3)
+                if robot.bus.read("Torque_Enable", GRIP, num_retry=3) == 0:
+                    log.info("Gripper motor off: you can open it by hand (use --keep-grip to keep it clamped)")
+                    break
+            except (ConnectionError, OSError) as e:
+                log.debug(f"Gripper off attempt {attempt + 1} failed: {e}")
+            time.sleep(0.1)
+        else:
+            log.warning("Couldn't confirm the gripper motor is off; trying again on a fresh connection")
+    try:
+        robot.disconnect()
+    except (ConnectionError, OSError) as e:
+        log.warning(f"Disconnect hit a bus error ({e})")
+    if not args.keep_grip:
+        free_gripper_fresh(port)
+
+
+def free_gripper_fresh(port):
+    """The manual fix that always worked, as the very last step: a brand-new connection that only
+    turns the gripper motor off, then disconnects without touching the other motors."""
+    from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
+
+    try:
+        r = SO101Follower(SO101FollowerConfig(port=port, id=FOLLOWER_ID))
+        r.bus.connect(handshake=False)  # skip the all-motors check: only the gripper matters here
+        r.bus.disable_torque(GRIP, num_retry=3)
+        r.bus.disconnect(disable_torque=False)
+        log.info("Gripper is free")
+    except Exception as e:  # never let this hide the real reason the program stopped
+        log.warning(f"Couldn't free the gripper on a fresh connection ({e})")
 
 
 def read_joints(robot):
@@ -1004,6 +1070,9 @@ def run(args):
         grip_home = None
         pull = None
         near_seen = 0.0  # last time a person was close enough to be the one grabbing the phone
+        person_seen = 0.0  # last time anyone was detected
+        cover_start = None  # when the picture went blank; False = went blank with nobody around (ignored)
+        last_share_check = 0.0
         pull_warned = False
         if robot:
             grip_home = read_joints(robot)[GRIP]
@@ -1113,6 +1182,15 @@ def run(args):
 
         last_control = time.monotonic()
         while not stop.is_set() and (t_end is None or time.time() < t_end):
+            # Someone may start another program on the arm while we run; fighting it garbles the bus
+            # and crashes both, so stop cleanly as soon as it shows up.
+            if robot and time.time() - last_share_check > 2.0:
+                last_share_check = time.time()
+                others = other_users_of(robot.config.port)
+                if others:
+                    log.error("Another program just started using the arm, stopping so we don't fight it:\n  "
+                              + "\n  ".join(others))
+                    break
             process_commands()
             seq, frame = cam.read(seq)
             now_control = time.monotonic()
@@ -1171,6 +1249,24 @@ def run(args):
                 tw, th = target[2], target[3]
                 if (target[4] == "face" and tw > 0.15 * w) or (target[4] != "face" and th > 0.6 * h):
                     near_seen = now
+            if boxes:
+                person_seen = now
+
+            # A hand over the lens makes the picture almost uniform. It only counts if someone was in
+            # view just before (a hand reaching for the phone), so a blank wall never releases it.
+            detail = picture_detail(frame)
+            if held and detail < args.cover_detail:
+                if cover_start is None:
+                    cover_start = now if now - person_seen < 2.0 else False
+                if cover_start and now - cover_start >= args.cover_seconds:
+                    if robot and args.gripper_open_sign:
+                        release("camera covered")
+                        control.requested_reach = control.reach
+                    else:
+                        log.info("Camera covered: would release the phone now (dry run)")
+                    cover_start = None
+            else:
+                cover_start = None
 
             freeze = False
             if robot and args.gripper_open_sign and held and pull:
@@ -1268,6 +1364,10 @@ def run(args):
                 if control.depth:
                     status += f" | range {control.depth.distance:.2f}m" if control.depth.distance is not None else " | depth HOLD"
                 preview.show(annotate(frame, boxes, target, smoothed, args.deadband, status))
+    except OSError as e:  # serial errors: the port vanished or another program is talking to the arm
+        others = other_users_of(robot.config.port) if robot else []
+        log.error(f"Lost contact with the arm ({e})" + (
+            "\nAnother program is using it:\n  " + "\n  ".join(others) if others else ""))
     finally:
         control.publish(mode="stopped")
         if gestures:
@@ -1288,6 +1388,10 @@ def main():
     p.add_argument("--home-height", type=float, default=0.26, help="Reset pose: gripper tip metres above the base")
     p.add_argument("--home-pitch", type=float, default=0.0,
                    help="Reset pose: degrees the gripper points above (+) or below (-) level")
+    p.add_argument("--cover-seconds", type=float, default=2.0,
+                   help="cover the camera with your hand this long to release the phone")
+    p.add_argument("--cover-detail", type=float, default=15.0,
+                   help="picture counts as covered below this detail level")
     p.add_argument("--party-speed", type=float, default=1.0,
                    help="Party mode tempo (bigger = quicker direction changes, smaller swings once the servos "
                         "can't reach the ends in time)")
