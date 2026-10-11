@@ -281,13 +281,14 @@ img{max-width:100%;display:block;margin:0 auto}
 button{font-size:1.2em;padding:.7em 1.6em;margin:.8em .4em;border:0;border-radius:.5em;cursor:pointer;
 background:#2f81f7;color:#fff}#msg{min-height:1.4em}
 </style></head><body><img src="/stream">
-<button onclick="send('rotate')">Rotate phone 90&deg;</button><div id="msg"></div>
+<button onclick="send('rotate')">Rotate phone 90&deg;</button>
+<button onclick="send('party')" style="background:#d63ac9">Party mode &#127881;</button><div id="msg"></div>
 <script>function send(c){fetch('/'+c,{method:'POST'}).then(r=>r.text()).then(t=>msg.textContent=t)
 .catch(()=>msg.textContent='Could not reach the tracker')}</script></body></html>"""
 
 
 class Preview:
-    """Serves a page at http://<host>:<port>/ with the annotated camera feed and a Rotate button."""
+    """Serves a page at http://<host>:<port>/ with the annotated camera feed, Rotate and Party buttons."""
 
     def __init__(self, port, on_command):
         self.jpeg = None
@@ -300,9 +301,10 @@ class Preview:
                 pass
 
             def do_POST(self):
-                if self.path.strip("/") == "rotate":
-                    on_command("rotate")
-                    body, code = b"Rotating...", 200
+                cmd = self.path.strip("/")
+                if cmd in ("rotate", "party"):
+                    on_command(cmd)
+                    body, code = (b"Rotating..." if cmd == "rotate" else b"Party mode toggled"), 200
                 else:
                     body, code = b"unknown command", 404
                 self.send_response(code)
@@ -684,6 +686,50 @@ def raise_arm(robot, args):
 # --------------------------------------------------------------------------- main loop
 
 
+# (joint, amplitude deg, base frequency Hz, phase): different rhythms per joint so it looks wild.
+PARTY_MOVES = [
+    ("shoulder_pan", 30.0, 1.0, 0.0),
+    ("wrist_flex", 20.0, 1.7, 1.0),
+    ("wrist_roll", 45.0, 1.3, 2.0),
+    ("elbow_flex", 8.0, 0.8, 0.5),
+    ("shoulder_lift", 5.0, 0.6, 1.5),
+]
+
+
+def party(robot, args, stop, commands):
+    """Dance until Party is pressed again (or Ctrl+C), then ease back to where it started.
+
+    Runs its own ~40 Hz loop (tracking is limited by the camera). Ramps in over 1 s so it doesn't
+    lurch, keeps wrist_roll inside its range, and never touches the gripper.
+    """
+    start = read_joints(robot)
+    log.info(f"PARTY MODE (speed x{args.party_speed:g}) - press Party again to stop")
+    t0 = time.time()
+    last = {}
+    while not stop.is_set():
+        try:
+            if commands.get_nowait() == "party":
+                break
+        except queue.Empty:
+            pass
+        t = time.time() - t0
+        ramp = min(1.0, t / 1.0)
+        action = {}
+        for joint, amp, freq, phase in PARTY_MOVES:
+            angle = start[joint] + ramp * amp * np.sin(2 * np.pi * freq * args.party_speed * t + phase)
+            if joint == ROLL:
+                angle = np.clip(angle, -170.0, 170.0)
+            action[f"{joint}.pos"] = float(angle)
+        robot.send_action(action)
+        last = action
+        time.sleep(max(0.0, 1 / 40 - (time.time() - t0 - t)))
+    # Ease back to the starting pose over 1 s so tracking picks up where it left off.
+    for i in range(1, 21):
+        robot.send_action({k: float(v + (start[k.removesuffix(".pos")] - v) * i / 20) for k, v in last.items()})
+        time.sleep(0.05)
+    log.info("Party over, back to tracking")
+
+
 def run(args):
     stop = threading.Event()
     signal.signal(signal.SIGINT, lambda *_: stop.set())
@@ -821,6 +867,18 @@ def run(args):
                     log.info("Rotate pressed: would rotate the phone now (dry run)")
                 rotated = not rotated
                 continue  # next frame comes from the new orientation
+            if cmd == "party":
+                if robot:
+                    if preview:
+                        party_frame = frame.copy()
+                        cv2.putText(party_frame, "PARTY MODE", (40, h // 2), cv2.FONT_HERSHEY_SIMPLEX, 2.0,
+                                    (255, 0, 255), 5)
+                        preview.show(party_frame)
+                    party(robot, args, stop, commands)
+                    smoothed = None  # re-find the person after dancing
+                else:
+                    log.info("Party pressed: would party now (dry run)")
+                continue
 
             if robot and target is not None:
                 action = {}
@@ -917,6 +975,8 @@ def main():
     p.add_argument("--contact-load", type=float, default=200.0,
                    help="stop squeezing once the gripper feels this much push-back (of 1000)")
     p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
+    p.add_argument("--party-speed", type=float, default=1.5,
+                   help="Party mode tempo multiplier (bigger = faster; the servos top out around 2.5)")
     p.add_argument("--rotate-deg", type=float, default=90.0,
                    help="how far the Rotate button turns the phone (wrist_roll); it picks the direction with room")
     p.add_argument("--camera-on-roll", choices=["no", "cw", "ccw"], default="no",
