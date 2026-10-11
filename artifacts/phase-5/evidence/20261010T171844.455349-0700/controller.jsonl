@@ -1,0 +1,1 @@
+{"timestamp_s": 78406.312267403, "session_id": "bd9a7a1d06824f3c824004314d04f606", "event": "fault", "reason": "worker_failure:Failed to sync read 'Present_Position' on ids=[1, 2, 3, 4, 5, 6] after 1 tries. [TxRxResult] Incorrect status packet!", "backend": "live"}

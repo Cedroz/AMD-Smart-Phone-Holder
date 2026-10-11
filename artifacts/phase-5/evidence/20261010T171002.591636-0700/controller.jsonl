@@ -1,0 +1,1 @@
+{"timestamp_s": 78058.84115731, "session_id": "572f1a2581ca4dfbb9027b0b9da4e44a", "event": "fault", "reason": "worker_failure:device reports readiness to read but returned no data (device disconnected or multiple access on port?)", "backend": "live"}

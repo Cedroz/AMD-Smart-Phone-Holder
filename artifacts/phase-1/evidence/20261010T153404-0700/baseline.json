@@ -1,0 +1,10 @@
+{
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "interpreter": "/home/aup/AMD-Smart-Phone-Holder/.venv/bin/python",
+  "torch_runtime": "2.11.0+cu130",
+  "cuda_available": false,
+  "cuda": "13.0",
+  "hip": null,
+  "ffmpeg_library_dir": "/home/aup/miniforge3/lib"
+}

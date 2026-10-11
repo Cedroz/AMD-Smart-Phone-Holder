@@ -1,0 +1,4 @@
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+enp97s0          DOWN           
+enp98s0          DOWN           
+wlp99s0          UP             169.233.72.8/21 fe80::8dab:d7a7:ced:8b1f/64 

@@ -1,0 +1,142 @@
+{
+  "backend": "fake",
+  "synthetic": true,
+  "trials": [
+    {
+      "trial_id": 1,
+      "target": "station_b",
+      "arrived": true
+    },
+    {
+      "trial_id": 2,
+      "target": "station_a",
+      "arrived": true
+    },
+    {
+      "trial_id": 3,
+      "target": "station_b",
+      "arrived": true
+    },
+    {
+      "trial_id": 4,
+      "target": "station_a",
+      "arrived": true
+    },
+    {
+      "trial_id": 5,
+      "target": "station_b",
+      "arrived": true
+    },
+    {
+      "trial_id": 6,
+      "target": "station_a",
+      "arrived": true
+    },
+    {
+      "trial_id": 7,
+      "target": "station_b",
+      "arrived": true
+    },
+    {
+      "trial_id": 8,
+      "target": "station_a",
+      "arrived": true
+    },
+    {
+      "trial_id": 9,
+      "target": "station_b",
+      "arrived": true
+    },
+    {
+      "trial_id": 10,
+      "target": "station_a",
+      "arrived": true
+    }
+  ],
+  "correct_destinations": 10,
+  "decisions": [
+    {
+      "request_id": "7a909c3d7c354a0583e90b26f232fb4b:0:16:station_b",
+      "target": "station_b",
+      "accepted": true,
+      "reason": "accepted",
+      "source_timestamp_s": 100.75,
+      "timestamp_s": 100.75
+    },
+    {
+      "request_id": "7a909c3d7c354a0583e90b26f232fb4b:0:123:station_a",
+      "target": "station_a",
+      "accepted": true,
+      "reason": "accepted",
+      "source_timestamp_s": 106.05,
+      "timestamp_s": 106.05
+    },
+    {
+      "request_id": "7a909c3d7c354a0583e90b26f232fb4b:0:230:station_b",
+      "target": "station_b",
+      "accepted": true,
+      "reason": "accepted",
+      "source_timestamp_s": 111.35,
+      "timestamp_s": 111.35
+    },
+    {
+      "request_id": "7a909c3d7c354a0583e90b26f232fb4b:0:337:station_a",
+      "target": "station_a",
+      "accepted": true,
+      "reason": "accepted",
+      "source_timestamp_s": 116.65,
+      "timestamp_s": 116.65
+    },
+    {
+      "request_id": "7a909c3d7c354a0583e90b26f232fb4b:0:444:station_b",
+      "target": "station_b",
+      "accepted": true,
+      "reason": "accepted",
+      "source_timestamp_s": 121.95,
+      "timestamp_s": 121.95
+    },
+    {
+      "request_id": "7a909c3d7c354a0583e90b26f232fb4b:0:551:station_a",
+      "target": "station_a",
+      "accepted": true,
+      "reason": "accepted",
+      "source_timestamp_s": 127.25,
+      "timestamp_s": 127.25
+    },
+    {
+      "request_id": "7a909c3d7c354a0583e90b26f232fb4b:0:658:station_b",
+      "target": "station_b",
+      "accepted": true,
+      "reason": "accepted",
+      "source_timestamp_s": 132.55,
+      "timestamp_s": 132.55
+    },
+    {
+      "request_id": "7a909c3d7c354a0583e90b26f232fb4b:0:765:station_a",
+      "target": "station_a",
+      "accepted": true,
+      "reason": "accepted",
+      "source_timestamp_s": 137.85,
+      "timestamp_s": 137.85
+    },
+    {
+      "request_id": "7a909c3d7c354a0583e90b26f232fb4b:0:872:station_b",
+      "target": "station_b",
+      "accepted": true,
+      "reason": "accepted",
+      "source_timestamp_s": 143.15,
+      "timestamp_s": 143.15
+    },
+    {
+      "request_id": "7a909c3d7c354a0583e90b26f232fb4b:0:979:station_a",
+      "target": "station_a",
+      "accepted": true,
+      "reason": "accepted",
+      "source_timestamp_s": 148.45,
+      "timestamp_s": 148.45
+    }
+  ],
+  "physical_commands": 0,
+  "single_io_owner": true,
+  "fault_reason": null
+}

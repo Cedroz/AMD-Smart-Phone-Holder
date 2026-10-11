@@ -1,0 +1,7 @@
+{
+  "requirements/runtime.lock": "f00c0006127db2c3330174265f5e01a5b08489798a6171eaae3cfc4241708ca1",
+  "requirements/vision.lock": "8e5b7e887093593202978d2bd8cc01b3966c2fc63f9ed9a7f61ed8d4b89e4342",
+  "requirements/runtime-build.lock": "c282b504e5eb07e4b2a04fc9543bdc7a86a33268cc423406f16b1798821c60d3",
+  "requirements/vision-build.lock": "c5c7ebba1d64cf02ffb8f701f1474bed2945c709c5509475147f7860c4d9a2a9",
+  "models/manifest.json": "13dcdf2ca81da7f042d6f465c1255860ee67cf7e604b9a6c23ace2ba41b49864"
+}

@@ -1,0 +1,41 @@
+test_ambiguous_tracking_cancels (test_phase3.ControllerTests.test_ambiguous_tracking_cancels) ... ok
+test_clipping_faults_and_unconfirmed_hold (test_phase3.ControllerTests.test_clipping_faults_and_unconfirmed_hold) ... ok
+test_concurrent_requests_one_slot (test_phase3.ControllerTests.test_concurrent_requests_one_slot) ... ok
+test_default_hold_never_constructs_live_adapter (test_phase3.ControllerTests.test_default_hold_never_constructs_live_adapter) ... ok
+test_failed_handshake_cleanup (test_phase3.ControllerTests.test_failed_handshake_cleanup) ... ok
+test_heartbeat_loss_cancels (test_phase3.ControllerTests.test_heartbeat_loss_cancels) ... ok
+test_hold_cancels_and_has_no_backlog (test_phase3.ControllerTests.test_hold_cancels_and_has_no_backlog) ... ok
+test_invalid_feedback_faults (test_phase3.ControllerTests.test_invalid_feedback_faults) ... ok
+test_lateness_faults_without_catchup (test_phase3.ControllerTests.test_lateness_faults_without_catchup) ... ok
+test_pending_expired_before_execution (test_phase3.ControllerTests.test_pending_expired_before_execution) ... ok
+test_read_failure_reset_requires_resolution (test_phase3.ControllerTests.test_read_failure_reset_requires_resolution) ... ok
+test_reset_nonanchor_does_not_restore_or_resume (test_phase3.ControllerTests.test_reset_nonanchor_does_not_restore_or_resume) ... ok
+test_reset_rejects_unresolved_calibration (test_phase3.ControllerTests.test_reset_rejects_unresolved_calibration) ... ok
+test_settling_timeout_uses_measured_feedback (test_phase3.ControllerTests.test_settling_timeout_uses_measured_feedback) ... ok
+test_slow_read_inhibits_dispatch (test_phase3.ControllerTests.test_slow_read_inhibits_dispatch) ... ok
+test_stale_future_and_duplicate_requests (test_phase3.ControllerTests.test_stale_future_and_duplicate_requests) ... ok
+test_stale_tracking_cancels (test_phase3.ControllerTests.test_stale_tracking_cancels) ... ok
+test_stop_arriving_before_dispatch (test_phase3.ControllerTests.test_stop_arriving_before_dispatch) ... ok
+test_stop_arriving_during_read (test_phase3.ControllerTests.test_stop_arriving_during_read) ... ok
+test_stop_has_priority_over_follow_and_reset (test_phase3.ControllerTests.test_stop_has_priority_over_follow_and_reset) ... ok
+test_stuck_joint_faults_without_claiming_arrival (test_phase3.ControllerTests.test_stuck_joint_faults_without_claiming_arrival) ... ok
+test_success_and_gripper_unchanged (test_phase3.ControllerTests.test_success_and_gripper_unchanged) ... ok
+test_unapproved_reverse_path (test_phase3.ControllerTests.test_unapproved_reverse_path) ... ok
+test_waypoints_require_settling_before_next_segment (test_phase3.ControllerTests.test_waypoints_require_settling_before_next_segment) ... ok
+test_write_failure_leaves_hold_unconfirmed (test_phase3.ControllerTests.test_write_failure_leaves_hold_unconfirmed) ... ok
+test_wrong_io_owner (test_phase3.ControllerTests.test_wrong_io_owner) ... ok
+test_derivative_bounds_and_joint_limits (test_phase3.ValidationTests.test_derivative_bounds_and_joint_limits) ... ok
+test_fake_library_cannot_be_live (test_phase3.ValidationTests.test_fake_library_cannot_be_live) ... ok
+test_library_configuration_copied (test_phase3.ValidationTests.test_library_configuration_copied) ... ok
+test_limits_and_units (test_phase3.ValidationTests.test_limits_and_units) ... ok
+test_production_library_empty_and_physical_gate_pending (test_phase3.ValidationTests.test_production_library_empty_and_physical_gate_pending) ... ok
+test_busy_device_never_opens_bus (test_phase3_sdk.SDKTests.test_busy_device_never_opens_bus) ... ok
+test_calibration_mismatch_closes_preserving_torque (test_phase3_sdk.SDKTests.test_calibration_mismatch_closes_preserving_torque) ... ok
+test_denied_arm_leaves_torque_unchanged (test_phase3_sdk.SDKTests.test_denied_arm_leaves_torque_unchanged) ... ok
+test_inspect_reads_without_configuration_and_preserves_torque (test_phase3_sdk.SDKTests.test_inspect_reads_without_configuration_and_preserves_torque) ... ok
+test_read_only_send_rejected (test_phase3_sdk.SDKTests.test_read_only_send_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 36 tests in 0.032s
+
+OK

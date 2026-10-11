@@ -1,0 +1,92 @@
+{
+  "state": {
+    "camera_role": "external",
+    "sequence": -1,
+    "capture_monotonic_ns": 0,
+    "processed_monotonic_ns": 0,
+    "visible": false,
+    "tracking_valid": false,
+    "ambiguous": false,
+    "invalid_reason": "waiting_for_camera",
+    "face_count": 0,
+    "face_center_raw": null,
+    "face_center_filtered": null,
+    "body_center_raw": null,
+    "body_center_filtered": null,
+    "track_generation": 0,
+    "selection_required": false,
+    "candidate_zone": null,
+    "stable_zone": null,
+    "candidate_since_ns": null,
+    "head_yaw_deg": null,
+    "head_pitch_deg": null,
+    "position_source": "face"
+  },
+  "motion_enabled": false,
+  "mode": "hold",
+  "source_mode": "native_camera",
+  "timestamp_limitations": null,
+  "zones": {
+    "schema_version": 1,
+    "status": "pending",
+    "camera_path": "/dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0",
+    "rotation": 0,
+    "image_size": [
+      640,
+      480
+    ],
+    "position_source": "face",
+    "margin": 0.03,
+    "regions": {}
+  },
+  "settings": {
+    "schema_version": 1,
+    "capture_width": 640,
+    "capture_height": 480,
+    "capture_fps": 30,
+    "external_hz": 10,
+    "wrist_hz": 0,
+    "inference_width": 320,
+    "freshness_ms": 500,
+    "capture_stall_s": 1,
+    "alpha": 0.25,
+    "dwell_s": 0.75,
+    "max_center_jump": 0.2,
+    "face_threshold": 0.7,
+    "position_source": "face",
+    "rotation": {
+      "external": 0,
+      "wrist": 0
+    }
+  },
+  "worker_error": null,
+  "metrics": {
+    "external": {
+      "capture_frames": 0,
+      "inferences": 0,
+      "dropped_frames": 0,
+      "last_sequence": 0,
+      "capture_fps": 0.0,
+      "inference_fps": 0.0,
+      "p50_age_ms": null,
+      "p95_age_ms": null,
+      "metadata": {},
+      "error": "Camera missing"
+    },
+    "wrist": {
+      "capture_frames": 0,
+      "inferences": 0,
+      "dropped_frames": 0,
+      "last_sequence": 0,
+      "capture_fps": 0.0,
+      "inference_fps": 0.0,
+      "p50_age_ms": null,
+      "p95_age_ms": null,
+      "metadata": {},
+      "error": "Camera missing"
+    }
+  },
+  "valid_observation_fraction": 0.0,
+  "log_directory": "artifacts/phase-2/evidence/resized-benchmark",
+  "elapsed_s": 0.15074633499898482
+}

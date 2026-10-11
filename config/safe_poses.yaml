@@ -1,0 +1,8 @@
+# Production library: Phase 4 must supply measured limits and approved paths.
+schema_version: 1
+backend: live
+units: degrees
+hardware_sha256: null
+joint_limits: {}
+poses: {}
+transitions: {}

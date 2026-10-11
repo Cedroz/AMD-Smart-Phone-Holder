@@ -1,0 +1,1 @@
+{"timestamp_s": 77674.058452914, "session_id": "85574362df894bb991df9e05c1702b29", "event": "fault", "reason": "worker_failure:FeetechMotorsBus is not connected. Run `.connect()` first.", "backend": "live"}

@@ -1,0 +1,908 @@
+{
+  "backend": "fake",
+  "seed": 5101,
+  "trials": [
+    {
+      "trial_id": 1,
+      "kind": "hold",
+      "latency_s": 0.046129604990710504,
+      "fake_io_delay_s": 0.0010661995071162417,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 2,
+      "kind": "stop",
+      "latency_s": 0.048663472989574075,
+      "fake_io_delay_s": 0.0007223507163670966,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 3,
+      "kind": "hold",
+      "latency_s": 0.03566900700388942,
+      "fake_io_delay_s": 0.0008916923292839281,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 4,
+      "kind": "stop",
+      "latency_s": 0.010473652990185656,
+      "fake_io_delay_s": 0.00181760727011255,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 5,
+      "kind": "hold",
+      "latency_s": 0.04921179400116671,
+      "fake_io_delay_s": 0.0016083567943941445,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 6,
+      "kind": "stop",
+      "latency_s": 0.04444829399290029,
+      "fake_io_delay_s": 0.0017306861349427234,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 7,
+      "kind": "hold",
+      "latency_s": 0.011357718001818284,
+      "fake_io_delay_s": 0.00040887796022597445,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 8,
+      "kind": "stop",
+      "latency_s": 0.005425202005426399,
+      "fake_io_delay_s": 0.0018895335128898479,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 9,
+      "kind": "hold",
+      "latency_s": 0.04360246899886988,
+      "fake_io_delay_s": 0.0010530409742536273,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 10,
+      "kind": "stop",
+      "latency_s": 0.04942599299829453,
+      "fake_io_delay_s": 0.001862972913230373,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 11,
+      "kind": "hold",
+      "latency_s": 0.008695210999576375,
+      "fake_io_delay_s": 0.0017476067582054974,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 12,
+      "kind": "stop",
+      "latency_s": 0.031857278998359106,
+      "fake_io_delay_s": 0.0002612895051966999,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 13,
+      "kind": "hold",
+      "latency_s": 0.015518536005401984,
+      "fake_io_delay_s": 3.058298296617568e-05,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 14,
+      "kind": "stop",
+      "latency_s": 0.01198442600434646,
+      "fake_io_delay_s": 0.0017417073679192548,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 15,
+      "kind": "hold",
+      "latency_s": 0.03270317500573583,
+      "fake_io_delay_s": 2.789661550298206e-05,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 16,
+      "kind": "stop",
+      "latency_s": 0.010936314007267356,
+      "fake_io_delay_s": 0.0009106015531439516,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 17,
+      "kind": "hold",
+      "latency_s": 0.018606926998472773,
+      "fake_io_delay_s": 0.0005806449426281122,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 18,
+      "kind": "stop",
+      "latency_s": 0.03705648999311961,
+      "fake_io_delay_s": 0.0016752098093094406,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 19,
+      "kind": "hold",
+      "latency_s": 0.01222036499530077,
+      "fake_io_delay_s": 0.0007649992523676563,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 20,
+      "kind": "stop",
+      "latency_s": 0.005366872996091843,
+      "fake_io_delay_s": 0.0009236624486919157,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 21,
+      "kind": "hold",
+      "latency_s": 0.026542622988927178,
+      "fake_io_delay_s": 0.00019948853759202612,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 22,
+      "kind": "stop",
+      "latency_s": 0.02567591999832075,
+      "fake_io_delay_s": 0.0015982770592404313,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 23,
+      "kind": "hold",
+      "latency_s": 0.02923318299872335,
+      "fake_io_delay_s": 0.000585029281951259,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 24,
+      "kind": "stop",
+      "latency_s": 0.021168256003875285,
+      "fake_io_delay_s": 0.001831379563543917,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 25,
+      "kind": "hold",
+      "latency_s": 0.004458372000954114,
+      "fake_io_delay_s": 0.0018174422650190682,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 26,
+      "kind": "stop",
+      "latency_s": 0.030472309998003766,
+      "fake_io_delay_s": 0.0014960537906937871,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 27,
+      "kind": "hold",
+      "latency_s": 0.04479884699685499,
+      "fake_io_delay_s": 0.0002588613138578735,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 28,
+      "kind": "stop",
+      "latency_s": 0.04907321599603165,
+      "fake_io_delay_s": 0.001163655638072079,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 29,
+      "kind": "hold",
+      "latency_s": 0.023711040994385257,
+      "fake_io_delay_s": 0.0017817752261777681,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 30,
+      "kind": "stop",
+      "latency_s": 0.045009649998974055,
+      "fake_io_delay_s": 0.0018665989440284313,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 31,
+      "kind": "hold",
+      "latency_s": 0.02466397499665618,
+      "fake_io_delay_s": 0.0019381458401315256,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 32,
+      "kind": "stop",
+      "latency_s": 0.04445851399214007,
+      "fake_io_delay_s": 0.0017520061853779224,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 33,
+      "kind": "hold",
+      "latency_s": 0.04199888299626764,
+      "fake_io_delay_s": 0.0015825179915443957,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 34,
+      "kind": "stop",
+      "latency_s": 0.03178341100283433,
+      "fake_io_delay_s": 0.001261958492146449,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 35,
+      "kind": "hold",
+      "latency_s": 0.025072856995393522,
+      "fake_io_delay_s": 0.00029410239325473663,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 36,
+      "kind": "stop",
+      "latency_s": 0.04702352899766993,
+      "fake_io_delay_s": 0.0016820110001951626,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 37,
+      "kind": "hold",
+      "latency_s": 0.047672116998001,
+      "fake_io_delay_s": 0.0015454135210911835,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 38,
+      "kind": "stop",
+      "latency_s": 0.025109855007031,
+      "fake_io_delay_s": 0.0005745014534403111,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 39,
+      "kind": "hold",
+      "latency_s": 0.008382207990507595,
+      "fake_io_delay_s": 0.0015669776278882904,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 40,
+      "kind": "stop",
+      "latency_s": 0.004984751998563297,
+      "fake_io_delay_s": 0.0014386020545812913,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 41,
+      "kind": "hold",
+      "latency_s": 0.02818385999125894,
+      "fake_io_delay_s": 0.00022775161764398467,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 42,
+      "kind": "stop",
+      "latency_s": 0.020939309004461393,
+      "fake_io_delay_s": 0.001368818670513702,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 43,
+      "kind": "hold",
+      "latency_s": 0.049274400997092016,
+      "fake_io_delay_s": 0.0016100985175006698,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 44,
+      "kind": "stop",
+      "latency_s": 0.023091647992259823,
+      "fake_io_delay_s": 0.0019062397841129563,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 45,
+      "kind": "hold",
+      "latency_s": 0.04589551899698563,
+      "fake_io_delay_s": 0.0006881614947697929,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 46,
+      "kind": "stop",
+      "latency_s": 0.02344096699380316,
+      "fake_io_delay_s": 0.0007132102961877316,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 47,
+      "kind": "hold",
+      "latency_s": 0.049902881000889465,
+      "fake_io_delay_s": 0.0008821289433926713,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 48,
+      "kind": "stop",
+      "latency_s": 0.011159430010593496,
+      "fake_io_delay_s": 0.0006819533417423458,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 49,
+      "kind": "hold",
+      "latency_s": 0.022916582005564123,
+      "fake_io_delay_s": 0.0016766032264539056,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 50,
+      "kind": "stop",
+      "latency_s": 0.02581416699104011,
+      "fake_io_delay_s": 0.0017418814732085765,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 51,
+      "kind": "hold",
+      "latency_s": 0.027012127990019508,
+      "fake_io_delay_s": 0.0013250981000737538,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 52,
+      "kind": "stop",
+      "latency_s": 0.050103485002182424,
+      "fake_io_delay_s": 0.0006849483700681507,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 53,
+      "kind": "hold",
+      "latency_s": 0.006367776994011365,
+      "fake_io_delay_s": 0.00054691234752738,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 54,
+      "kind": "stop",
+      "latency_s": 0.0024184930080082268,
+      "fake_io_delay_s": 0.000987210601439342,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 55,
+      "kind": "hold",
+      "latency_s": 0.028604091989109293,
+      "fake_io_delay_s": 0.001801121033174826,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 56,
+      "kind": "stop",
+      "latency_s": 0.038457228991319425,
+      "fake_io_delay_s": 0.0013343464502001017,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 57,
+      "kind": "hold",
+      "latency_s": 0.04687476300750859,
+      "fake_io_delay_s": 0.0003286661562684701,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 58,
+      "kind": "stop",
+      "latency_s": 0.014369707001606002,
+      "fake_io_delay_s": 0.00030704903358098434,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 59,
+      "kind": "hold",
+      "latency_s": 0.007443601003615186,
+      "fake_io_delay_s": 0.00036778842811164994,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 60,
+      "kind": "stop",
+      "latency_s": 0.006433589005609974,
+      "fake_io_delay_s": 0.001458445620666818,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 61,
+      "kind": "hold",
+      "latency_s": 0.04561779199866578,
+      "fake_io_delay_s": 0.001854252613129193,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 62,
+      "kind": "stop",
+      "latency_s": 0.0013766629999736324,
+      "fake_io_delay_s": 0.0003116403754416017,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 63,
+      "kind": "hold",
+      "latency_s": 0.004877301995293237,
+      "fake_io_delay_s": 0.0018304287122734755,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 64,
+      "kind": "stop",
+      "latency_s": 0.012437127996236086,
+      "fake_io_delay_s": 0.0015293274030960952,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 65,
+      "kind": "hold",
+      "latency_s": 0.032121281008585356,
+      "fake_io_delay_s": 4.02558511220128e-05,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 66,
+      "kind": "stop",
+      "latency_s": 0.042672297990066,
+      "fake_io_delay_s": 0.0017108069497313247,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 67,
+      "kind": "hold",
+      "latency_s": 0.036600682011339813,
+      "fake_io_delay_s": 0.0008957516026847047,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 68,
+      "kind": "stop",
+      "latency_s": 0.04195960098877549,
+      "fake_io_delay_s": 0.001014653927407802,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 69,
+      "kind": "hold",
+      "latency_s": 0.0031054930004756898,
+      "fake_io_delay_s": 0.0010433374498204533,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 70,
+      "kind": "stop",
+      "latency_s": 0.03804149500501808,
+      "fake_io_delay_s": 0.0010020387973742049,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 71,
+      "kind": "hold",
+      "latency_s": 0.006215443994733505,
+      "fake_io_delay_s": 0.000706484567544498,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 72,
+      "kind": "stop",
+      "latency_s": 0.028533951990539208,
+      "fake_io_delay_s": 0.0003536116506336824,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 73,
+      "kind": "hold",
+      "latency_s": 0.0050068830023519695,
+      "fake_io_delay_s": 0.0014451702003200968,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 74,
+      "kind": "stop",
+      "latency_s": 0.004800950002390891,
+      "fake_io_delay_s": 0.0010690160384253069,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 75,
+      "kind": "hold",
+      "latency_s": 0.041620399002567865,
+      "fake_io_delay_s": 0.0009566575661857811,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 76,
+      "kind": "stop",
+      "latency_s": 0.038468009006464854,
+      "fake_io_delay_s": 0.0015461763500920175,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 77,
+      "kind": "hold",
+      "latency_s": 0.03862007199495565,
+      "fake_io_delay_s": 0.001028208230508043,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 78,
+      "kind": "stop",
+      "latency_s": 0.008895863997167908,
+      "fake_io_delay_s": 0.0010055087064254923,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 79,
+      "kind": "hold",
+      "latency_s": 0.034926824999274686,
+      "fake_io_delay_s": 0.0004179829211101438,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 80,
+      "kind": "stop",
+      "latency_s": 0.027245001008850522,
+      "fake_io_delay_s": 0.0014441800401518913,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 81,
+      "kind": "hold",
+      "latency_s": 0.03581983799813315,
+      "fake_io_delay_s": 0.0006464181579655062,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 82,
+      "kind": "stop",
+      "latency_s": 0.016266829014057294,
+      "fake_io_delay_s": 0.0014018656681021825,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 83,
+      "kind": "hold",
+      "latency_s": 0.014161128012347035,
+      "fake_io_delay_s": 9.864945593296648e-05,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 84,
+      "kind": "stop",
+      "latency_s": 0.027465180988656357,
+      "fake_io_delay_s": 0.0005387753271578763,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 85,
+      "kind": "hold",
+      "latency_s": 0.01605107801151462,
+      "fake_io_delay_s": 5.6340808422699286e-05,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 86,
+      "kind": "stop",
+      "latency_s": 0.04065336799249053,
+      "fake_io_delay_s": 0.00019852243028194727,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 87,
+      "kind": "hold",
+      "latency_s": 0.01530608099710662,
+      "fake_io_delay_s": 7.555400034420123e-05,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 88,
+      "kind": "stop",
+      "latency_s": 0.038036715995986015,
+      "fake_io_delay_s": 0.0005612432149067947,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 89,
+      "kind": "hold",
+      "latency_s": 0.039577654999447986,
+      "fake_io_delay_s": 0.0005603393278781221,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 90,
+      "kind": "stop",
+      "latency_s": 0.03595543099800125,
+      "fake_io_delay_s": 5.021461407631156e-05,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 91,
+      "kind": "hold",
+      "latency_s": 0.042101233993889764,
+      "fake_io_delay_s": 0.0008834057649576281,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 92,
+      "kind": "stop",
+      "latency_s": 0.0431722180073848,
+      "fake_io_delay_s": 0.00010497592717694216,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 93,
+      "kind": "hold",
+      "latency_s": 0.009868976994766854,
+      "fake_io_delay_s": 0.0015674881786409503,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 94,
+      "kind": "stop",
+      "latency_s": 0.041145644994685426,
+      "fake_io_delay_s": 0.0006010567526732549,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 95,
+      "kind": "hold",
+      "latency_s": 0.0025283769937232137,
+      "fake_io_delay_s": 6.816261572531634e-05,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 96,
+      "kind": "stop",
+      "latency_s": 0.041617953989771195,
+      "fake_io_delay_s": 0.00038349682557803176,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 97,
+      "kind": "hold",
+      "latency_s": 0.04609716399863828,
+      "fake_io_delay_s": 7.871539665466364e-05,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 98,
+      "kind": "stop",
+      "latency_s": 0.020018834999063984,
+      "fake_io_delay_s": 0.0013252917020832693,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 99,
+      "kind": "hold",
+      "latency_s": 0.003947170000174083,
+      "fake_io_delay_s": 0.0013455194232049835,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    },
+    {
+      "trial_id": 100,
+      "kind": "stop",
+      "latency_s": 0.013163620998966508,
+      "fake_io_delay_s": 0.00014679544566434632,
+      "physical_commands": 0,
+      "single_io_owner": true,
+      "hold_confirmed": true
+    }
+  ],
+  "passed": true,
+  "max_latency_s": 0.050103485002182424
+}

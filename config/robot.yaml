@@ -1,0 +1,22 @@
+schema_version: 1
+backend: fake
+dry_run: true
+mode: hold
+live_movement_enabled: false
+follower_port: /dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128613-if00
+calibration_id: follower_arm
+arm_units: degrees
+gripper_units: percent
+gripper_commands_enabled: false
+limits:
+  velocity: 10.0
+  acceleration: 20.0
+  relative: 2.0
+  hz: 20.0
+  freshness_s: 0.5
+  heartbeat_s: 3.0
+  deviation_deg: 3.0
+  deviation_s: 0.3
+  arrival_deg: 2.0
+  arrival_s: 0.25
+  settling_s: 2.0

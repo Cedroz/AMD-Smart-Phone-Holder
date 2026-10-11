@@ -1,0 +1,2 @@
+{"timestamp_s": 78285.37318689, "session_id": "1e7b95801bf240079c870f4c54be88c1", "event": "fault", "reason": "worker_failure:device reports readiness to read but returned no data (device disconnected or multiple access on port?)", "backend": "live"}
+{"timestamp_s": 78285.373601092, "session_id": "1e7b95801bf240079c870f4c54be88c1", "event": "fault", "reason": "cleanup_unconfirmed:Failed to read 'Present_Position' on id_=1 after 1 tries. [TxRxResult] Port is in use!", "backend": "live"}

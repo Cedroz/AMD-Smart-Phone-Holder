@@ -1,0 +1,127 @@
+{
+  "path": "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128613-if00",
+  "present": true,
+  "resolved_path": "/dev/ttyACM1",
+  "calibration_id": "follower_arm",
+  "calibration_path": "/home/aup/.cache/huggingface/lerobot/calibration/robots/so_follower/follower_arm.json",
+  "physical_identity": "Session follower unplug test; physical labels still require operator verification",
+  "saved_calibration": {
+    "shoulder_pan": {
+      "id": 1,
+      "drive_mode": 0,
+      "homing_offset": 348,
+      "range_min": 697,
+      "range_max": 3261
+    },
+    "shoulder_lift": {
+      "id": 2,
+      "drive_mode": 0,
+      "homing_offset": 437,
+      "range_min": 914,
+      "range_max": 3285
+    },
+    "elbow_flex": {
+      "id": 3,
+      "drive_mode": 0,
+      "homing_offset": -149,
+      "range_min": 794,
+      "range_max": 3000
+    },
+    "wrist_flex": {
+      "id": 4,
+      "drive_mode": 0,
+      "homing_offset": 41,
+      "range_min": 1000,
+      "range_max": 3175
+    },
+    "wrist_roll": {
+      "id": 5,
+      "drive_mode": 0,
+      "homing_offset": 19,
+      "range_min": 0,
+      "range_max": 4095
+    },
+    "gripper": {
+      "id": 6,
+      "drive_mode": 0,
+      "homing_offset": -1,
+      "range_min": 1279,
+      "range_max": 2747
+    }
+  },
+  "calibration_sha256": "7e7fb799691185b02fa9c86ac86f3a978aed2ef52ec7146895402f970c7c138d",
+  "owners": [],
+  "bus_read": {
+    "on_device_calibration": {
+      "shoulder_pan": {
+        "id": 1,
+        "drive_mode": 0,
+        "homing_offset": 348,
+        "range_min": 697,
+        "range_max": 3261
+      },
+      "shoulder_lift": {
+        "id": 2,
+        "drive_mode": 0,
+        "homing_offset": 437,
+        "range_min": 914,
+        "range_max": 3285
+      },
+      "elbow_flex": {
+        "id": 3,
+        "drive_mode": 0,
+        "homing_offset": -149,
+        "range_min": 794,
+        "range_max": 3000
+      },
+      "wrist_flex": {
+        "id": 4,
+        "drive_mode": 0,
+        "homing_offset": 41,
+        "range_min": 1000,
+        "range_max": 3175
+      },
+      "wrist_roll": {
+        "id": 5,
+        "drive_mode": 0,
+        "homing_offset": 19,
+        "range_min": 0,
+        "range_max": 4095
+      },
+      "gripper": {
+        "id": 6,
+        "drive_mode": 0,
+        "homing_offset": -1,
+        "range_min": 1279,
+        "range_max": 2747
+      }
+    },
+    "matches_saved_calibration": true,
+    "positions": {
+      "shoulder_pan": -11.604395604395604,
+      "shoulder_lift": -100.96703296703296,
+      "elbow_flex": 96.43956043956044,
+      "wrist_flex": 9.186813186813186,
+      "wrist_roll": 97.36263736263736,
+      "gripper": 0.7493188010899182
+    },
+    "units": {
+      "shoulder_pan": "degrees",
+      "shoulder_lift": "degrees",
+      "elbow_flex": "degrees",
+      "wrist_flex": "degrees",
+      "wrist_roll": "degrees",
+      "gripper": "percent"
+    },
+    "torque_enabled": {
+      "shoulder_pan": 1,
+      "shoulder_lift": 0,
+      "elbow_flex": 1,
+      "wrist_flex": 1,
+      "wrist_roll": 1,
+      "gripper": 1
+    },
+    "motion_commands_sent": 0,
+    "limitations": "Register match does not establish mechanical accuracy or payload readiness."
+  }
+}

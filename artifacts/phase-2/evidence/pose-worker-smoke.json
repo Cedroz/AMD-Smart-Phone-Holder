@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "ready": {
+    "type": "ready",
+    "protocol_version": 1,
+    "interpreter": "/home/aup/AMD-Smart-Phone-Holder/.venv-vision/bin/python",
+    "mediapipe_version": "1.1.0",
+    "model_sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+  },
+  "replies": [
+    {
+      "type": "result",
+      "request_id": "13f34950c8e84b46b874c3b11552f406",
+      "camera_role": "external",
+      "sequence": 1,
+      "capture_monotonic_ns": 73534954541829,
+      "face_count": 0,
+      "landmarks": [],
+      "transformation_matrices": [],
+      "shoulder_center": null,
+      "error": null
+    },
+    {
+      "type": "result",
+      "request_id": "a4b883589c84468683da30f2dab2880c",
+      "camera_role": "wrist",
+      "sequence": 1,
+      "capture_monotonic_ns": 73534958559721,
+      "face_count": 0,
+      "landmarks": [],
+      "transformation_matrices": [],
+      "shoulder_center": null,
+      "error": null
+    }
+  ],
+  "serial_opened": false,
+  "camera_opened": false
+}

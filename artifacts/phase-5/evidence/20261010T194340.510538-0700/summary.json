@@ -1,0 +1,61 @@
+{
+  "backend": "fake",
+  "mode": "hold",
+  "controller_mode": "hold",
+  "state": "HOLDING",
+  "current_pose": null,
+  "target_pose": null,
+  "motion_enabled": false,
+  "fault_reason": null,
+  "hold_confirmed": true,
+  "last_reason": "shutdown",
+  "heartbeat_age_s": null,
+  "cooldown_remaining_s": 0,
+  "tracking": {
+    "camera_role": "external",
+    "sequence": 79,
+    "track_generation": 0,
+    "capture_monotonic_ns": 87028353522473,
+    "visible": true,
+    "tracking_valid": true,
+    "ambiguous": false,
+    "selection_required": false,
+    "candidate_zone": "station_a",
+    "stable_zone": "station_a",
+    "candidate_since_ns": 87024394609388
+  },
+  "measured": {
+    "shoulder_pan": 0.0,
+    "shoulder_lift": 0.0,
+    "elbow_flex": 0.0,
+    "wrist_flex": 0.0,
+    "wrist_roll": 0.0,
+    "gripper": 0.0
+  },
+  "physical_commands": 0,
+  "decision_count": 0,
+  "tracking_behavior": "continuous_centering",
+  "requested_joints": null,
+  "pan_bounds_deg": [
+    -15.0,
+    15.0
+  ],
+  "centering_axes": [
+    "horizontal"
+  ],
+  "joint_bounds_deg": null,
+  "direction_calibration": null,
+  "direction_calibration_active": false,
+  "live_response_mapping_validated": false,
+  "direction_source": "calibration",
+  "perception_mode": "synthetic",
+  "supervisor_error": null,
+  "log_directory": "/home/aup/AMD-Smart-Phone-Holder/artifacts/phase-5/evidence/20261010T194340.510538-0700",
+  "alignment_enabled": false,
+  "live_ready": false,
+  "live_motion_blockers": [
+    "live_approval_paths_missing",
+    "arm_camera_requires_motion_aware_tracking_validation"
+  ],
+  "perception": null
+}

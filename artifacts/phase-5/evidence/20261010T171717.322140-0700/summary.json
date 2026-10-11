@@ -1,0 +1,99 @@
+{
+  "backend": "live",
+  "mode": "hold",
+  "controller_mode": "hold",
+  "state": "FAULT",
+  "current_pose": null,
+  "target_pose": null,
+  "motion_enabled": false,
+  "fault_reason": "worker_dead",
+  "hold_confirmed": false,
+  "last_reason": "shutdown",
+  "heartbeat_age_s": null,
+  "cooldown_remaining_s": 0,
+  "tracking": {
+    "visible": false,
+    "tracking_valid": false,
+    "invalid_reason": "camera_stale"
+  },
+  "measured": {
+    "shoulder_pan": -20.65934065934066,
+    "shoulder_lift": -89.27472527472527,
+    "elbow_flex": 96.35164835164835,
+    "wrist_flex": 5.142857142857143,
+    "wrist_roll": 97.36263736263736,
+    "gripper": 0.8174386920980926
+  },
+  "physical_commands": 0,
+  "decision_count": 0,
+  "tracking_behavior": "continuous_centering",
+  "requested_joints": null,
+  "pan_bounds_deg": [
+    -22.65934065934066,
+    -18.65934065934066
+  ],
+  "centering_axes": [
+    "horizontal",
+    "vertical"
+  ],
+  "joint_bounds_deg": {
+    "shoulder_pan": [
+      -22.65934065934066,
+      -18.65934065934066
+    ],
+    "wrist_flex": [
+      4.230769230769231,
+      6.230769230769231
+    ]
+  },
+  "direction_calibration": null,
+  "direction_calibration_active": false,
+  "live_response_mapping_validated": false,
+  "direction_source": "track.py default signs",
+  "perception_mode": "native",
+  "supervisor_error": "robot_worker_failure",
+  "log_directory": "/home/aup/AMD-Smart-Phone-Holder/artifacts/phase-5/evidence/20261010T171717.322140-0700",
+  "alignment_enabled": false,
+  "live_ready": false,
+  "live_motion_blockers": [],
+  "perception": {
+    "state": {
+      "visible": false,
+      "tracking_valid": false,
+      "invalid_reason": "camera_stale"
+    },
+    "source_modes": {
+      "external": "native_camera"
+    },
+    "worker_error": "pick_target() missing 1 required positional argument: 'max_jump'",
+    "metrics": {
+      "external": {
+        "inferences": 0,
+        "error": null,
+        "inference_fps": 0.0
+      }
+    },
+    "settings": {
+      "schema_version": 1,
+      "capture_width": 640,
+      "capture_height": 480,
+      "capture_fps": 30,
+      "external_hz": 10,
+      "wrist_hz": 0,
+      "inference_width": 640,
+      "freshness_ms": 500,
+      "capture_stall_s": 1,
+      "alpha": 0.25,
+      "dwell_s": 0.75,
+      "max_center_jump": 0.2,
+      "face_threshold": 0.7,
+      "position_source": "face",
+      "rotation": {
+        "external": 0,
+        "wrist": 0
+      }
+    },
+    "detector": "track.py face/body",
+    "mode": "hold"
+  }
+}

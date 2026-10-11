@@ -1,0 +1,17 @@
+schema_version: 1
+capture_width: 640
+capture_height: 480
+capture_fps: 30
+external_hz: 10
+wrist_hz: 0
+inference_width: 640
+freshness_ms: 500
+capture_stall_s: 1
+alpha: 0.25
+dwell_s: 0.75
+max_center_jump: 0.20
+face_threshold: 0.7
+position_source: face
+rotation:
+  external: 0
+  wrist: 0

@@ -1,0 +1,123 @@
+{
+  "config": {
+    "arms": {
+      "follower": {
+        "calibration_id": "follower_arm",
+        "port": "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128613-if00"
+      },
+      "leader": {
+        "calibration_id": "leader_arm",
+        "port": "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128105-if00"
+      }
+    },
+    "autonomous_motion_approved": false,
+    "cameras": {
+      "external": "/dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0",
+      "wrist": "/dev/v4l/by-id/usb-icSpring_icspring_camera_202404160005-video-index0"
+    },
+    "dry_run": true,
+    "ffmpeg_library_dir": "/home/aup/miniforge3/lib",
+    "host": "169.233.72.8",
+    "mediapipe_version": "1.1.0",
+    "mode": "hold",
+    "model_manifest": "models/manifest.json",
+    "model_path": "models/face_landmarker.task",
+    "schema_version": 1,
+    "vision_python": "/home/aup/AMD-Smart-Phone-Holder/.venv-vision/bin/python"
+  },
+  "vision_identity": {
+    "executable": "/home/aup/AMD-Smart-Phone-Holder/.venv-vision/bin/python",
+    "version": [
+      3,
+      12
+    ]
+  },
+  "model_sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+  "devices": {
+    "external": {
+      "path": "/dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0",
+      "present": true,
+      "resolved": "/dev/video0",
+      "owners": [
+        43138
+      ]
+    },
+    "wrist": {
+      "path": "/dev/v4l/by-id/usb-icSpring_icspring_camera_202404160005-video-index0",
+      "present": true,
+      "resolved": "/dev/video2",
+      "owners": [
+        43234
+      ]
+    },
+    "follower": {
+      "path": "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128613-if00",
+      "present": true,
+      "resolved": "/dev/ttyACM1",
+      "owners": []
+    },
+    "leader": {
+      "path": "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128105-if00",
+      "present": true,
+      "resolved": "/dev/ttyACM0",
+      "owners": []
+    }
+  },
+  "calibration_unchanged": true,
+  "hardware_opened": false,
+  "handshake": {
+    "type": "ready",
+    "protocol_version": 1,
+    "interpreter": "/home/aup/AMD-Smart-Phone-Holder/.venv-vision/bin/python",
+    "mediapipe_version": "1.1.0",
+    "model_sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+  },
+  "worker_smoke": {
+    "inferences": 4,
+    "blank_face_counts": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "invalid_jpeg_rejected": true,
+    "elapsed_s": 0.010072275006677955
+  },
+  "recorded_at": "2026-10-10T15:42:50.558427-07:00",
+  "runtime_python": "/home/aup/AMD-Smart-Phone-Holder/.venv/bin/python",
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "torch_runtime": "2.11.0+cu130",
+  "gpu_available": false,
+  "torchcodec": "0.11.1+cpu",
+  "vision_inventory": {
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "packages": {
+      "packaging": "26.3",
+      "fonttools": "4.66.1",
+      "setuptools": "81.0.0",
+      "six": "1.17.0",
+      "wheel": "0.48.0",
+      "flatbuffers": "25.12.19",
+      "certifi": "2026.7.22",
+      "matplotlib": "3.11.2",
+      "sounddevice": "0.5.6",
+      "opencv-contrib-python": "5.0.0.93",
+      "absl-py": "2.5.1",
+      "followme": "0.1.0",
+      "numpy": "2.5.4",
+      "python-dateutil": "2.9.0.post0",
+      "pyparsing": "3.3.3",
+      "kiwisolver": "1.5.1",
+      "pip": "26.2.1",
+      "cffi": "2.1.1",
+      "pillow": "12.3.0",
+      "cycler": "0.12.1",
+      "pycparser": "3.11",
+      "contourpy": "1.4.0",
+      "mediapipe": "1.1.0"
+    }
+  },
+  "motion_commands_sent": 0,
+  "software_checks_passed": true,
+  "physical_gate": "pending; environment checks do not approve movement"
+}

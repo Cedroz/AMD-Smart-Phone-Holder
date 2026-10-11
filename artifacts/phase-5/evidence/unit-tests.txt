@@ -1,0 +1,44 @@
+test_approved_flags_cannot_replace_physical_evidence (test_phase5.EnvironmentTests.test_approved_flags_cannot_replace_physical_evidence) ... ok
+test_approved_session_revalidates_evidence (test_phase5.EnvironmentTests.test_approved_session_revalidates_evidence) ... ok
+test_dry_run_synthetic_does_not_import_perception (test_phase5.EnvironmentTests.test_dry_run_synthetic_does_not_import_perception) ... ok
+test_inspect_never_constructs_live_adapter (test_phase5.EnvironmentTests.test_inspect_never_constructs_live_adapter) ... ok
+test_live_without_approval_rejected (test_phase5.EnvironmentTests.test_live_without_approval_rejected) ... ok
+test_replay_input_requires_explicit_follow (test_phase5.EnvironmentTests.test_replay_input_requires_explicit_follow) ... ok
+test_ten_alternating_trials (test_phase5.EnvironmentTests.test_ten_alternating_trials) ... ok
+test_weakened_config_rejected (test_phase5.EnvironmentTests.test_weakened_config_rejected) ... ok
+test_ambiguity_interrupts (test_phase5.PlannerTests.test_ambiguity_interrupts) ... ok
+test_api_auth_controls_and_no_joint_endpoint (test_phase5.PlannerTests.test_api_auth_controls_and_no_joint_endpoint) ... /home/aup/AMD-Smart-Phone-Holder/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+ok
+test_camera_panels_and_viewing_only_sources (test_phase5.PlannerTests.test_camera_panels_and_viewing_only_sources) ... ok
+test_competing_operator_rejected (test_phase5.PlannerTests.test_competing_operator_rejected) ... ok
+test_controller_inhibit_never_auto_resumes (test_phase5.PlannerTests.test_controller_inhibit_never_auto_resumes) ... ok
+test_cooldown_starts_at_arrival (test_phase5.PlannerTests.test_cooldown_starts_at_arrival) ... ok
+test_duplicate_does_not_advance_dwell (test_phase5.PlannerTests.test_duplicate_does_not_advance_dwell) ... ok
+test_dwell_threshold_and_single_request (test_phase5.PlannerTests.test_dwell_threshold_and_single_request) ... ok
+test_future_frame_rejected (test_phase5.PlannerTests.test_future_frame_rejected) ... ok
+test_generation_change_requires_follow (test_phase5.PlannerTests.test_generation_change_requires_follow) ... ok
+test_heartbeat_expiry_releases_owner (test_phase5.PlannerTests.test_heartbeat_expiry_releases_owner) ... ok
+test_hold_stop_early_middle_late (test_phase5.PlannerTests.test_hold_stop_early_middle_late) ... ok
+test_live_proxy_rejected_by_bridge (test_phase5.PlannerTests.test_live_proxy_rejected_by_bridge) ... ok
+test_malformed_zone_fails_closed (test_phase5.PlannerTests.test_malformed_zone_fails_closed) ... ok
+test_missing_route_fails_closed (test_phase5.PlannerTests.test_missing_route_fails_closed) ... ok
+test_neutral_and_jitter_reset_dwell (test_phase5.PlannerTests.test_neutral_and_jitter_reset_dwell) ... ok
+test_no_queued_opposite_request (test_phase5.PlannerTests.test_no_queued_opposite_request) ... ok
+test_owned_camera_stream_uses_existing_preview_without_heartbeat (test_phase5.PlannerTests.test_owned_camera_stream_uses_existing_preview_without_heartbeat) ... ok
+test_regressing_sequence_rejected (test_phase5.PlannerTests.test_regressing_sequence_rejected) ... ok
+test_rejected_request_consumed (test_phase5.PlannerTests.test_rejected_request_consumed) ... ok
+test_reset_midpath_requires_supervised_restore (test_phase5.PlannerTests.test_reset_midpath_requires_supervised_restore) ... ok
+test_reset_returns_hold (test_phase5.PlannerTests.test_reset_returns_hold) ... ok
+test_same_pose_never_repositions (test_phase5.PlannerTests.test_same_pose_never_repositions) ... ok
+test_stale_observation_interrupts (test_phase5.PlannerTests.test_stale_observation_interrupts) ... ok
+test_stop_priority_and_latch (test_phase5.PlannerTests.test_stop_priority_and_latch) ... ok
+test_tracking_failure_holds_no_auto_resume (test_phase5.PlannerTests.test_tracking_failure_holds_no_auto_resume) ... ok
+test_unknown_anchor_returns_hold (test_phase5.PlannerTests.test_unknown_anchor_returns_hold) ... ok
+test_websocket_telemetry_does_not_renew_lease (test_phase5.PlannerTests.test_websocket_telemetry_does_not_renew_lease) ... ok
+test_worker_failure_interrupts (test_phase5.PlannerTests.test_worker_failure_interrupts) ... ok
+
+----------------------------------------------------------------------
+Ran 37 tests in 0.477s
+
+OK

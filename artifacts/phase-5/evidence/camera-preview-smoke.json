@@ -1,0 +1,12 @@
+{
+  "external": {
+    "port": 8000,
+    "http_status": 200,
+    "jpeg_received": true
+  },
+  "wrist": {
+    "port": 8011,
+    "http_status": 200,
+    "jpeg_received": true
+  }
+}

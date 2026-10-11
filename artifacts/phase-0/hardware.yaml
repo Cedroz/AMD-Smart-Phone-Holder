@@ -1,0 +1,371 @@
+schema_version: 1
+devices:
+  arm_model:
+    value: SO-101
+    source: user/session identification
+    physical_label_verified: false
+  arms:
+    follower:
+      path: /dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128613-if00
+      present: true
+      resolved_path: /dev/ttyACM1
+      calibration_id: follower_arm
+      calibration_path: /home/aup/.cache/huggingface/lerobot/calibration/robots/so_follower/follower_arm.json
+      physical_identity: Session follower unplug test; physical labels still require
+        operator verification
+      saved_calibration:
+        shoulder_pan:
+          id: 1
+          drive_mode: 0
+          homing_offset: 348
+          range_min: 697
+          range_max: 3261
+        shoulder_lift:
+          id: 2
+          drive_mode: 0
+          homing_offset: 437
+          range_min: 914
+          range_max: 3285
+        elbow_flex:
+          id: 3
+          drive_mode: 0
+          homing_offset: -149
+          range_min: 794
+          range_max: 3000
+        wrist_flex:
+          id: 4
+          drive_mode: 0
+          homing_offset: 41
+          range_min: 1000
+          range_max: 3175
+        wrist_roll:
+          id: 5
+          drive_mode: 0
+          homing_offset: 19
+          range_min: 0
+          range_max: 4095
+        gripper:
+          id: 6
+          drive_mode: 0
+          homing_offset: -1
+          range_min: 1279
+          range_max: 2747
+      calibration_sha256: 7e7fb799691185b02fa9c86ac86f3a978aed2ef52ec7146895402f970c7c138d
+      owners: []
+      bus_read:
+        on_device_calibration:
+          shoulder_pan:
+            id: 1
+            drive_mode: 0
+            homing_offset: 348
+            range_min: 697
+            range_max: 3261
+          shoulder_lift:
+            id: 2
+            drive_mode: 0
+            homing_offset: 437
+            range_min: 914
+            range_max: 3285
+          elbow_flex:
+            id: 3
+            drive_mode: 0
+            homing_offset: -149
+            range_min: 794
+            range_max: 3000
+          wrist_flex:
+            id: 4
+            drive_mode: 0
+            homing_offset: 41
+            range_min: 1000
+            range_max: 3175
+          wrist_roll:
+            id: 5
+            drive_mode: 0
+            homing_offset: 19
+            range_min: 0
+            range_max: 4095
+          gripper:
+            id: 6
+            drive_mode: 0
+            homing_offset: -1
+            range_min: 1279
+            range_max: 2747
+        matches_saved_calibration: true
+        positions:
+          shoulder_pan: 14.065934065934066
+          shoulder_lift: -102.81318681318682
+          elbow_flex: 96.26373626373626
+          wrist_flex: 53.05494505494506
+          wrist_roll: -5.230769230769231
+          gripper: 0.8174386920980926
+        units:
+          shoulder_pan: degrees
+          shoulder_lift: degrees
+          elbow_flex: degrees
+          wrist_flex: degrees
+          wrist_roll: degrees
+          gripper: percent
+        torque_enabled:
+          shoulder_pan: 0
+          shoulder_lift: 0
+          elbow_flex: 0
+          wrist_flex: 0
+          wrist_roll: 0
+          gripper: 0
+        motion_commands_sent: 0
+        limitations: Register match does not establish mechanical accuracy or payload
+          readiness.
+    leader:
+      path: /dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128105-if00
+      present: true
+      resolved_path: /dev/ttyACM0
+      calibration_id: leader_arm
+      calibration_path: /home/aup/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/leader_arm.json
+      physical_identity: Session follower unplug test; physical labels still require
+        operator verification
+      saved_calibration:
+        shoulder_pan:
+          id: 1
+          drive_mode: 0
+          homing_offset: -305
+          range_min: 765
+          range_max: 3332
+        shoulder_lift:
+          id: 2
+          drive_mode: 0
+          homing_offset: 504
+          range_min: 897
+          range_max: 3262
+        elbow_flex:
+          id: 3
+          drive_mode: 0
+          homing_offset: -374
+          range_min: 765
+          range_max: 2971
+        wrist_flex:
+          id: 4
+          drive_mode: 0
+          homing_offset: -876
+          range_min: 916
+          range_max: 3247
+        wrist_roll:
+          id: 5
+          drive_mode: 0
+          homing_offset: 887
+          range_min: 0
+          range_max: 4095
+        gripper:
+          id: 6
+          drive_mode: 0
+          homing_offset: 881
+          range_min: 1278
+          range_max: 2505
+      calibration_sha256: 014dffb44db7daa3a99a6937d09ca8ec8541a11ffc740ce374334acbd148a574
+      owners: []
+      bus_read:
+        on_device_calibration:
+          shoulder_pan:
+            id: 1
+            drive_mode: 0
+            homing_offset: -305
+            range_min: 765
+            range_max: 3332
+          shoulder_lift:
+            id: 2
+            drive_mode: 0
+            homing_offset: 504
+            range_min: 897
+            range_max: 3262
+          elbow_flex:
+            id: 3
+            drive_mode: 0
+            homing_offset: -374
+            range_min: 765
+            range_max: 2971
+          wrist_flex:
+            id: 4
+            drive_mode: 0
+            homing_offset: -876
+            range_min: 916
+            range_max: 3247
+          wrist_roll:
+            id: 5
+            drive_mode: 0
+            homing_offset: 887
+            range_min: 0
+            range_max: 4095
+          gripper:
+            id: 6
+            drive_mode: 0
+            homing_offset: 881
+            range_min: 1278
+            range_max: 2505
+        matches_saved_calibration: true
+        positions:
+          shoulder_pan: 22.197802197802197
+          shoulder_lift: -85.23076923076923
+          elbow_flex: 90.1978021978022
+          wrist_flex: 52.175824175824175
+          wrist_roll: -5.142857142857143
+          gripper: 0.32599837000814996
+        units:
+          shoulder_pan: degrees
+          shoulder_lift: degrees
+          elbow_flex: degrees
+          wrist_flex: degrees
+          wrist_roll: degrees
+          gripper: percent
+        torque_enabled:
+          shoulder_pan: 0
+          shoulder_lift: 0
+          elbow_flex: 0
+          wrist_flex: 0
+          wrist_roll: 0
+          gripper: 0
+        motion_commands_sent: 0
+        limitations: Register match does not establish mechanical accuracy or payload
+          readiness.
+  cameras:
+  - path: /dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0
+    resolved_path: /dev/video0
+    role: external
+    role_status: passed
+    snapshot: artifacts/phase-0/evidence/20261010T152136.086253-0700/usb-icSpring_icspring_camera-video-index0.jpg
+    shape:
+    - 480
+    - 640
+    - 3
+    reported_fps: 30.0
+    fourcc: YUYV
+    role_source: User confirmed previous port 8000 static and port 8001 arm-mounted;
+      stable device mappings retained.
+    preview_url: http://169.233.72.8:8000/
+    owners_at_inventory: []
+  - path: /dev/v4l/by-id/usb-icSpring_icspring_camera_202404160005-video-index0
+    resolved_path: /dev/video2
+    role: wrist
+    role_status: passed
+    snapshot: artifacts/phase-0/evidence/20261010T152136.086253-0700/usb-icSpring_icspring_camera_202404160005-video-index0.jpg
+    shape:
+    - 480
+    - 640
+    - 3
+    reported_fps: 30.0
+    fourcc: MJPG
+    role_source: User confirmed previous port 8000 static and port 8001 arm-mounted;
+      stable device mappings retained.
+    preview_url: http://169.233.72.8:8001/
+    owners_at_inventory: []
+payload:
+  status: pending
+  identity: null
+  component_masses_g: {}
+  total_mass_g: null
+  dimensions_mm: null
+  mount_reference: null
+  offset_mm: null
+  retention_arrangement: null
+  intended_demo_payload: null
+  evidence: []
+workspace:
+  status: pending
+  reference_frame: null
+  units: millimeters
+  station_a: null
+  station_b: null
+  operating_region: null
+  obstacles: []
+  excluded_areas: []
+  evidence: []
+candidate_locations:
+  station_a:
+    status: pending
+    description: null
+    coordinates_mm: null
+    observed_joints: null
+    hold_duration_s: 60
+    hold_test_result: null
+    readability: null
+    evidence: []
+  station_b:
+    status: pending
+    description: null
+    coordinates_mm: null
+    observed_joints: null
+    hold_duration_s: 60
+    hold_test_result: null
+    readability: null
+    evidence: []
+physical_stop:
+  status: pending
+  mechanism: null
+  location: null
+  affected_circuit: null
+  observed_torque_behavior: null
+  stationary_unloaded_result: null
+  stationary_surrogate_result: null
+  moving_surrogate_result: null
+  intended_payload_result: null
+  restart_procedure: null
+  evidence: []
+mount_inspection:
+  status: pending
+  base_secure: null
+  holder_secure: null
+  power_markings: null
+  power_compatibility_reference: null
+  cable_clearance: null
+  evidence: []
+restrictions:
+  autonomous_motion_approved: false
+  approved_trajectories: []
+  absolute_joint_limits_degrees: null
+  mechanical_speed_limits: null
+  wrist_refinement: pending_camera_role_and_view_verification
+  camera_observations:
+    video0: Room view with multiple people; workstation regions not marked.
+    video2: Close rotated robot assembly view; face alignment not established.
+  revalidation_triggers:
+  - payload
+  - holder
+  - camera mount
+  - cable routing
+  - base location
+  - power setup
+  - boundaries
+  - physical stop
+  unresolved_items:
+  - base and payload retention inspection
+  - power compatibility
+  - payload mass and geometry
+  - two loaded viewing positions
+  - physical stop tests
+  - workspace boundaries and exclusions
+assessment:
+  recorded_at: '2026-10-10T15:21:36.086253-07:00'
+  operator: Codex automated read-only inspection
+  overall_outcome: blocked
+  reason: Hardware discovery and calibration match verified; physical acceptance evidence
+    pending.
+  steps:
+    '0.1': pending
+    '0.2': pending
+    '0.3': pending
+    '0.4': pending
+    '0.5': pending
+    '0.6': blocked
+    '0.7': blocked
+    '0.8': pending
+    '0.9': blocked
+  automated_checks:
+    device_discovery: passed
+    serial_ownership: passed
+    follower_calibration_match: passed
+    leader_calibration_match: passed
+    camera_frame_capture: passed
+    motion_commands_sent: 0
+  evidence:
+  - artifacts/phase-0/evidence/20261010T152136.086253-0700/inventory.json
+  - artifacts/phase-0/evidence/20261010T152136.086253-0700/lsusb.txt
+  - artifacts/phase-0/evidence/20261010T152136.086253-0700/network.txt
+  camera_role_confirmation_at: '2026-10-10T15:25:22.624789-07:00'

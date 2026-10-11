@@ -1,0 +1,32 @@
+/home/aup/AMD-Smart-Phone-Holder/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_invalid_regions (test_phase2.ConfigurationTests.test_invalid_regions) ... ok
+test_invalid_settings (test_phase2.ConfigurationTests.test_invalid_settings) ... ok
+test_orientation_metadata (test_phase2.ConfigurationTests.test_orientation_metadata) ... ok
+test_package_and_replay_import_do_not_open_hardware (test_phase2.ConfigurationTests.test_package_and_replay_import_do_not_open_hardware) ... ok
+test_acquisition_and_dwell (test_phase2.TrackingTests.test_acquisition_and_dwell) ... ok
+test_ambiguity_requires_explicit_reacquire (test_phase2.TrackingTests.test_ambiguity_requires_explicit_reacquire) ... ok
+test_boundary_jitter_retains_current_zone (test_phase2.TrackingTests.test_boundary_jitter_retains_current_zone) ... ok
+test_continuity_jump_does_not_select_another_person (test_phase2.TrackingTests.test_continuity_jump_does_not_select_another_person) ... ok
+test_duplicate_and_wrong_role_cannot_overwrite (test_phase2.TrackingTests.test_duplicate_and_wrong_role_cannot_overwrite) ... ok
+test_ema (test_phase2.TrackingTests.test_ema) ... ok
+test_future_and_stale_results (test_phase2.TrackingTests.test_future_and_stale_results) ... ok
+test_malformed_landmarks (test_phase2.TrackingTests.test_malformed_landmarks) ... ok
+test_missing_face_resets_zone_dwell (test_phase2.TrackingTests.test_missing_face_resets_zone_dwell) ... ok
+test_neutral_then_second_zone_requires_dwell (test_phase2.TrackingTests.test_neutral_then_second_zone_requires_dwell) ... ok
+test_shoulders_do_not_silently_fall_back_to_face (test_phase2.TrackingTests.test_shoulders_do_not_silently_fall_back_to_face) ... ok
+test_stale_tick_clears_selection_without_an_inference_reply (test_phase2.TrackingTests.test_stale_tick_clears_selection_without_an_inference_reply) ... ok
+test_unconfigured_zones_never_choose_a_destination (test_phase2.TrackingTests.test_unconfigured_zones_never_choose_a_destination) ... ok
+test_capture_stall_terminates_only_its_process_without_blocking_monitor (test_phase2_replay.ReplayAndCaptureTests.test_capture_stall_terminates_only_its_process_without_blocking_monitor) ... ok
+test_latest_capture_replaces_a_consumed_sequence (test_phase2_replay.ReplayAndCaptureTests.test_latest_capture_replaces_a_consumed_sequence) ... ok
+test_replay_matches_logged_states_and_transitions (test_phase2_replay.ReplayAndCaptureTests.test_replay_matches_logged_states_and_transitions) ... ok
+test_cross_origin_calibration_and_reacquisition_rejected (test_phase2_web.WebTests.test_cross_origin_calibration_and_reacquisition_rejected) ... ok
+test_invalid_calibration_does_not_write_configuration (test_phase2_web.WebTests.test_invalid_calibration_does_not_write_configuration) ... ok
+test_stale_stream_is_unavailable (test_phase2_web.WebTests.test_stale_stream_is_unavailable) ... ok
+test_status_and_console_are_camera_only (test_phase2_web.WebTests.test_status_and_console_are_camera_only) ... ok
+test_worker_failure_requires_restart (test_phase2_web.WebTests.test_worker_failure_requires_restart) ... ok
+
+----------------------------------------------------------------------
+Ran 25 tests in 1.127s
+
+OK

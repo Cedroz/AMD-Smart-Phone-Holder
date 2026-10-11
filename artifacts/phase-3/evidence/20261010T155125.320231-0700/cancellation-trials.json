@@ -1,0 +1,702 @@
+[
+  {
+    "trial": 0,
+    "operation": "hold",
+    "io_delay_s": 0.0015677940817371856,
+    "handling_latency_s": 0.03546024799288716,
+    "physical_commands": 0
+  },
+  {
+    "trial": 1,
+    "operation": "stop",
+    "io_delay_s": 0.0017504545712939627,
+    "handling_latency_s": 0.031979856998077594,
+    "physical_commands": 0
+  },
+  {
+    "trial": 2,
+    "operation": "hold",
+    "io_delay_s": 0.00030337781118357324,
+    "handling_latency_s": 0.03608899899700191,
+    "physical_commands": 0
+  },
+  {
+    "trial": 3,
+    "operation": "stop",
+    "io_delay_s": 0.0019916235538492127,
+    "handling_latency_s": 0.029033692000666633,
+    "physical_commands": 0
+  },
+  {
+    "trial": 4,
+    "operation": "hold",
+    "io_delay_s": 0.00040026966274550005,
+    "handling_latency_s": 0.01715536399569828,
+    "physical_commands": 0
+  },
+  {
+    "trial": 5,
+    "operation": "stop",
+    "io_delay_s": 0.0005793491977873031,
+    "handling_latency_s": 0.03297916799783707,
+    "physical_commands": 0
+  },
+  {
+    "trial": 6,
+    "operation": "hold",
+    "io_delay_s": 0.000730194396404519,
+    "handling_latency_s": 0.050530149004771374,
+    "physical_commands": 0
+  },
+  {
+    "trial": 7,
+    "operation": "stop",
+    "io_delay_s": 0.0017632836158610308,
+    "handling_latency_s": 0.031695899000624195,
+    "physical_commands": 0
+  },
+  {
+    "trial": 8,
+    "operation": "hold",
+    "io_delay_s": 0.0007342657340071492,
+    "handling_latency_s": 0.025481367003521882,
+    "physical_commands": 0
+  },
+  {
+    "trial": 9,
+    "operation": "stop",
+    "io_delay_s": 0.0008590854085372328,
+    "handling_latency_s": 0.027873892002389766,
+    "physical_commands": 0
+  },
+  {
+    "trial": 10,
+    "operation": "hold",
+    "io_delay_s": 0.0011519405949957998,
+    "handling_latency_s": 0.03501181300089229,
+    "physical_commands": 0
+  },
+  {
+    "trial": 11,
+    "operation": "stop",
+    "io_delay_s": 0.0010920954121611053,
+    "handling_latency_s": 0.02090138899802696,
+    "physical_commands": 0
+  },
+  {
+    "trial": 12,
+    "operation": "hold",
+    "io_delay_s": 0.0017808920114546266,
+    "handling_latency_s": 0.016633582999929786,
+    "physical_commands": 0
+  },
+  {
+    "trial": 13,
+    "operation": "stop",
+    "io_delay_s": 0.00047546374800428294,
+    "handling_latency_s": 0.036174346998450346,
+    "physical_commands": 0
+  },
+  {
+    "trial": 14,
+    "operation": "hold",
+    "io_delay_s": 0.0009297393968979748,
+    "handling_latency_s": 0.044615635997615755,
+    "physical_commands": 0
+  },
+  {
+    "trial": 15,
+    "operation": "stop",
+    "io_delay_s": 0.0007691156939210858,
+    "handling_latency_s": 0.023732079993351363,
+    "physical_commands": 0
+  },
+  {
+    "trial": 16,
+    "operation": "hold",
+    "io_delay_s": 0.00029699764736249224,
+    "handling_latency_s": 0.02955447099520825,
+    "physical_commands": 0
+  },
+  {
+    "trial": 17,
+    "operation": "stop",
+    "io_delay_s": 0.0008583457130645673,
+    "handling_latency_s": 0.01649563599494286,
+    "physical_commands": 0
+  },
+  {
+    "trial": 18,
+    "operation": "hold",
+    "io_delay_s": 0.0004420915597294224,
+    "handling_latency_s": 0.013967366990982555,
+    "physical_commands": 0
+  },
+  {
+    "trial": 19,
+    "operation": "stop",
+    "io_delay_s": 0.0003035911858002207,
+    "handling_latency_s": 0.021418331991299056,
+    "physical_commands": 0
+  },
+  {
+    "trial": 20,
+    "operation": "hold",
+    "io_delay_s": 0.0006653800635987969,
+    "handling_latency_s": 0.01838491299713496,
+    "physical_commands": 0
+  },
+  {
+    "trial": 21,
+    "operation": "stop",
+    "io_delay_s": 0.00035185433949848566,
+    "handling_latency_s": 0.04750832199351862,
+    "physical_commands": 0
+  },
+  {
+    "trial": 22,
+    "operation": "hold",
+    "io_delay_s": 0.00044940423276176666,
+    "handling_latency_s": 0.04104220200679265,
+    "physical_commands": 0
+  },
+  {
+    "trial": 23,
+    "operation": "stop",
+    "io_delay_s": 0.0009796991777955269,
+    "handling_latency_s": 0.03839476199937053,
+    "physical_commands": 0
+  },
+  {
+    "trial": 24,
+    "operation": "hold",
+    "io_delay_s": 0.001369721010703536,
+    "handling_latency_s": 0.03848221499356441,
+    "physical_commands": 0
+  },
+  {
+    "trial": 25,
+    "operation": "stop",
+    "io_delay_s": 0.001290293663042951,
+    "handling_latency_s": 0.02165664501080755,
+    "physical_commands": 0
+  },
+  {
+    "trial": 26,
+    "operation": "hold",
+    "io_delay_s": 0.0005076775570690951,
+    "handling_latency_s": 0.025886121002258733,
+    "physical_commands": 0
+  },
+  {
+    "trial": 27,
+    "operation": "stop",
+    "io_delay_s": 8.30516969327868e-05,
+    "handling_latency_s": 0.027524381002876908,
+    "physical_commands": 0
+  },
+  {
+    "trial": 28,
+    "operation": "hold",
+    "io_delay_s": 0.0014940184371941157,
+    "handling_latency_s": 0.034091519002686255,
+    "physical_commands": 0
+  },
+  {
+    "trial": 29,
+    "operation": "stop",
+    "io_delay_s": 0.0003088482509953239,
+    "handling_latency_s": 0.034036697004921734,
+    "physical_commands": 0
+  },
+  {
+    "trial": 30,
+    "operation": "hold",
+    "io_delay_s": 0.0012908120501452834,
+    "handling_latency_s": 0.031092224002350122,
+    "physical_commands": 0
+  },
+  {
+    "trial": 31,
+    "operation": "stop",
+    "io_delay_s": 0.00019083947413629798,
+    "handling_latency_s": 0.02213647900498472,
+    "physical_commands": 0
+  },
+  {
+    "trial": 32,
+    "operation": "hold",
+    "io_delay_s": 4.944298047702867e-05,
+    "handling_latency_s": 0.02122160499857273,
+    "physical_commands": 0
+  },
+  {
+    "trial": 33,
+    "operation": "stop",
+    "io_delay_s": 0.00016467677022319883,
+    "handling_latency_s": 0.01778702999581583,
+    "physical_commands": 0
+  },
+  {
+    "trial": 34,
+    "operation": "hold",
+    "io_delay_s": 0.0005550788399844713,
+    "handling_latency_s": 0.026145382988033816,
+    "physical_commands": 0
+  },
+  {
+    "trial": 35,
+    "operation": "stop",
+    "io_delay_s": 0.0014544554612461694,
+    "handling_latency_s": 0.020215722994180396,
+    "physical_commands": 0
+  },
+  {
+    "trial": 36,
+    "operation": "hold",
+    "io_delay_s": 0.0013633395332594991,
+    "handling_latency_s": 0.036964247992727906,
+    "physical_commands": 0
+  },
+  {
+    "trial": 37,
+    "operation": "stop",
+    "io_delay_s": 0.0014061318488197874,
+    "handling_latency_s": 0.036858722000033595,
+    "physical_commands": 0
+  },
+  {
+    "trial": 38,
+    "operation": "hold",
+    "io_delay_s": 0.0017368800428835033,
+    "handling_latency_s": 0.026519701001234353,
+    "physical_commands": 0
+  },
+  {
+    "trial": 39,
+    "operation": "stop",
+    "io_delay_s": 0.0016347667698667745,
+    "handling_latency_s": 0.03882492400589399,
+    "physical_commands": 0
+  },
+  {
+    "trial": 40,
+    "operation": "hold",
+    "io_delay_s": 0.0016802753669400866,
+    "handling_latency_s": 0.03169020899804309,
+    "physical_commands": 0
+  },
+  {
+    "trial": 41,
+    "operation": "stop",
+    "io_delay_s": 0.0017159279567546138,
+    "handling_latency_s": 0.047592779010301456,
+    "physical_commands": 0
+  },
+  {
+    "trial": 42,
+    "operation": "hold",
+    "io_delay_s": 0.000345804716107311,
+    "handling_latency_s": 0.018250843990244903,
+    "physical_commands": 0
+  },
+  {
+    "trial": 43,
+    "operation": "stop",
+    "io_delay_s": 1.3262282113954526e-05,
+    "handling_latency_s": 0.019158955008606426,
+    "physical_commands": 0
+  },
+  {
+    "trial": 44,
+    "operation": "hold",
+    "io_delay_s": 0.001675390511047075,
+    "handling_latency_s": 0.026880762990913354,
+    "physical_commands": 0
+  },
+  {
+    "trial": 45,
+    "operation": "stop",
+    "io_delay_s": 0.0018234835421498089,
+    "handling_latency_s": 0.04039380500034895,
+    "physical_commands": 0
+  },
+  {
+    "trial": 46,
+    "operation": "hold",
+    "io_delay_s": 0.0019807113905336918,
+    "handling_latency_s": 0.04431575800117571,
+    "physical_commands": 0
+  },
+  {
+    "trial": 47,
+    "operation": "stop",
+    "io_delay_s": 0.0005216834691166034,
+    "handling_latency_s": 0.03613332100212574,
+    "physical_commands": 0
+  },
+  {
+    "trial": 48,
+    "operation": "hold",
+    "io_delay_s": 0.0017706198814642765,
+    "handling_latency_s": 0.017927751992829144,
+    "physical_commands": 0
+  },
+  {
+    "trial": 49,
+    "operation": "stop",
+    "io_delay_s": 2.63070127618954e-05,
+    "handling_latency_s": 0.03711773399845697,
+    "physical_commands": 0
+  },
+  {
+    "trial": 50,
+    "operation": "hold",
+    "io_delay_s": 0.0017115805589114944,
+    "handling_latency_s": 0.028689309998298995,
+    "physical_commands": 0
+  },
+  {
+    "trial": 51,
+    "operation": "stop",
+    "io_delay_s": 0.0006822491920925809,
+    "handling_latency_s": 0.026075123008922674,
+    "physical_commands": 0
+  },
+  {
+    "trial": 52,
+    "operation": "hold",
+    "io_delay_s": 0.001039017546543022,
+    "handling_latency_s": 0.029001201008213684,
+    "physical_commands": 0
+  },
+  {
+    "trial": 53,
+    "operation": "stop",
+    "io_delay_s": 0.0006773167263980249,
+    "handling_latency_s": 0.026001074991654605,
+    "physical_commands": 0
+  },
+  {
+    "trial": 54,
+    "operation": "hold",
+    "io_delay_s": 0.00043130816515219285,
+    "handling_latency_s": 0.03894790299818851,
+    "physical_commands": 0
+  },
+  {
+    "trial": 55,
+    "operation": "stop",
+    "io_delay_s": 0.0014133940414660135,
+    "handling_latency_s": 0.01895270099339541,
+    "physical_commands": 0
+  },
+  {
+    "trial": 56,
+    "operation": "hold",
+    "io_delay_s": 0.0013965547394151697,
+    "handling_latency_s": 0.02958584000589326,
+    "physical_commands": 0
+  },
+  {
+    "trial": 57,
+    "operation": "stop",
+    "io_delay_s": 0.0008971841470389619,
+    "handling_latency_s": 0.04839592499774881,
+    "physical_commands": 0
+  },
+  {
+    "trial": 58,
+    "operation": "hold",
+    "io_delay_s": 0.00047100940030941896,
+    "handling_latency_s": 0.03293321200180799,
+    "physical_commands": 0
+  },
+  {
+    "trial": 59,
+    "operation": "stop",
+    "io_delay_s": 0.0017259920482587728,
+    "handling_latency_s": 0.047499666005023755,
+    "physical_commands": 0
+  },
+  {
+    "trial": 60,
+    "operation": "hold",
+    "io_delay_s": 0.0008823256716064019,
+    "handling_latency_s": 0.036234379003872164,
+    "physical_commands": 0
+  },
+  {
+    "trial": 61,
+    "operation": "stop",
+    "io_delay_s": 0.0012976882135032049,
+    "handling_latency_s": 0.048891628001001664,
+    "physical_commands": 0
+  },
+  {
+    "trial": 62,
+    "operation": "hold",
+    "io_delay_s": 0.0007115405615883381,
+    "handling_latency_s": 0.02022841598954983,
+    "physical_commands": 0
+  },
+  {
+    "trial": 63,
+    "operation": "stop",
+    "io_delay_s": 0.0018696732522105212,
+    "handling_latency_s": 0.03318114401190542,
+    "physical_commands": 0
+  },
+  {
+    "trial": 64,
+    "operation": "hold",
+    "io_delay_s": 0.0011296092281846738,
+    "handling_latency_s": 0.03207971400115639,
+    "physical_commands": 0
+  },
+  {
+    "trial": 65,
+    "operation": "stop",
+    "io_delay_s": 0.0008814058889438479,
+    "handling_latency_s": 0.027815792986075394,
+    "physical_commands": 0
+  },
+  {
+    "trial": 66,
+    "operation": "hold",
+    "io_delay_s": 0.0004485595357990064,
+    "handling_latency_s": 0.0122926699987147,
+    "physical_commands": 0
+  },
+  {
+    "trial": 67,
+    "operation": "stop",
+    "io_delay_s": 0.0014181384578529487,
+    "handling_latency_s": 0.04631757500465028,
+    "physical_commands": 0
+  },
+  {
+    "trial": 68,
+    "operation": "hold",
+    "io_delay_s": 0.00040462520418189674,
+    "handling_latency_s": 0.03723218799859751,
+    "physical_commands": 0
+  },
+  {
+    "trial": 69,
+    "operation": "stop",
+    "io_delay_s": 0.0008356932080018383,
+    "handling_latency_s": 0.03308667799865361,
+    "physical_commands": 0
+  },
+  {
+    "trial": 70,
+    "operation": "hold",
+    "io_delay_s": 0.0009177520002152877,
+    "handling_latency_s": 0.03734287399856839,
+    "physical_commands": 0
+  },
+  {
+    "trial": 71,
+    "operation": "stop",
+    "io_delay_s": 0.0012859083610677075,
+    "handling_latency_s": 0.03351863200077787,
+    "physical_commands": 0
+  },
+  {
+    "trial": 72,
+    "operation": "hold",
+    "io_delay_s": 0.0008261076371379901,
+    "handling_latency_s": 0.018408937990898266,
+    "physical_commands": 0
+  },
+  {
+    "trial": 73,
+    "operation": "stop",
+    "io_delay_s": 0.00013141375900458475,
+    "handling_latency_s": 0.02867118699941784,
+    "physical_commands": 0
+  },
+  {
+    "trial": 74,
+    "operation": "hold",
+    "io_delay_s": 0.0013236003817372213,
+    "handling_latency_s": 0.040640494000399485,
+    "physical_commands": 0
+  },
+  {
+    "trial": 75,
+    "operation": "stop",
+    "io_delay_s": 0.0018301373039173315,
+    "handling_latency_s": 0.02586027300276328,
+    "physical_commands": 0
+  },
+  {
+    "trial": 76,
+    "operation": "hold",
+    "io_delay_s": 0.0003185611677991609,
+    "handling_latency_s": 0.039942543997312896,
+    "physical_commands": 0
+  },
+  {
+    "trial": 77,
+    "operation": "stop",
+    "io_delay_s": 0.0012393095115959213,
+    "handling_latency_s": 0.015178834000835195,
+    "physical_commands": 0
+  },
+  {
+    "trial": 78,
+    "operation": "hold",
+    "io_delay_s": 0.00179556739147019,
+    "handling_latency_s": 0.01644036200013943,
+    "physical_commands": 0
+  },
+  {
+    "trial": 79,
+    "operation": "stop",
+    "io_delay_s": 0.0013018291703374095,
+    "handling_latency_s": 0.048442981991684064,
+    "physical_commands": 0
+  },
+  {
+    "trial": 80,
+    "operation": "hold",
+    "io_delay_s": 0.0018695873862958632,
+    "handling_latency_s": 0.016470547998324037,
+    "physical_commands": 0
+  },
+  {
+    "trial": 81,
+    "operation": "stop",
+    "io_delay_s": 0.001807029397275469,
+    "handling_latency_s": 0.0445576680067461,
+    "physical_commands": 0
+  },
+  {
+    "trial": 82,
+    "operation": "hold",
+    "io_delay_s": 0.001064385620935977,
+    "handling_latency_s": 0.04840255698945839,
+    "physical_commands": 0
+  },
+  {
+    "trial": 83,
+    "operation": "stop",
+    "io_delay_s": 0.00022043175617038346,
+    "handling_latency_s": 0.046330990007845685,
+    "physical_commands": 0
+  },
+  {
+    "trial": 84,
+    "operation": "hold",
+    "io_delay_s": 0.0005048215456941791,
+    "handling_latency_s": 0.01653138198889792,
+    "physical_commands": 0
+  },
+  {
+    "trial": 85,
+    "operation": "stop",
+    "io_delay_s": 0.0005020565948282627,
+    "handling_latency_s": 0.032169730999157764,
+    "physical_commands": 0
+  },
+  {
+    "trial": 86,
+    "operation": "hold",
+    "io_delay_s": 0.0008972879497980097,
+    "handling_latency_s": 0.01221465399430599,
+    "physical_commands": 0
+  },
+  {
+    "trial": 87,
+    "operation": "stop",
+    "io_delay_s": 0.00108478963896505,
+    "handling_latency_s": 0.03254171399748884,
+    "physical_commands": 0
+  },
+  {
+    "trial": 88,
+    "operation": "hold",
+    "io_delay_s": 0.001980070793718568,
+    "handling_latency_s": 0.03423514700261876,
+    "physical_commands": 0
+  },
+  {
+    "trial": 89,
+    "operation": "stop",
+    "io_delay_s": 0.000645563276232388,
+    "handling_latency_s": 0.047806727001443505,
+    "physical_commands": 0
+  },
+  {
+    "trial": 90,
+    "operation": "hold",
+    "io_delay_s": 0.0008678993329494049,
+    "handling_latency_s": 0.026073019005707465,
+    "physical_commands": 0
+  },
+  {
+    "trial": 91,
+    "operation": "stop",
+    "io_delay_s": 0.0013633980611368756,
+    "handling_latency_s": 0.04424184899835382,
+    "physical_commands": 0
+  },
+  {
+    "trial": 92,
+    "operation": "hold",
+    "io_delay_s": 0.0017235275295686392,
+    "handling_latency_s": 0.02963328799523879,
+    "physical_commands": 0
+  },
+  {
+    "trial": 93,
+    "operation": "stop",
+    "io_delay_s": 0.0007003407081247295,
+    "handling_latency_s": 0.02495731100498233,
+    "physical_commands": 0
+  },
+  {
+    "trial": 94,
+    "operation": "hold",
+    "io_delay_s": 0.0002687555184104533,
+    "handling_latency_s": 0.03708905100938864,
+    "physical_commands": 0
+  },
+  {
+    "trial": 95,
+    "operation": "stop",
+    "io_delay_s": 0.0012817219541530567,
+    "handling_latency_s": 0.031948169009410776,
+    "physical_commands": 0
+  },
+  {
+    "trial": 96,
+    "operation": "hold",
+    "io_delay_s": 0.0019702690888659903,
+    "handling_latency_s": 0.027403406013036147,
+    "physical_commands": 0
+  },
+  {
+    "trial": 97,
+    "operation": "stop",
+    "io_delay_s": 0.0013577443128615018,
+    "handling_latency_s": 0.04131669299385976,
+    "physical_commands": 0
+  },
+  {
+    "trial": 98,
+    "operation": "hold",
+    "io_delay_s": 0.00036831677294721745,
+    "handling_latency_s": 0.03310479198989924,
+    "physical_commands": 0
+  },
+  {
+    "trial": 99,
+    "operation": "stop",
+    "io_delay_s": 0.001339603707868264,
+    "handling_latency_s": 0.049482036993140355,
+    "physical_commands": 0
+  }
+]

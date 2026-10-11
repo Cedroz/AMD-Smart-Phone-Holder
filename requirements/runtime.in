@@ -1,0 +1,8 @@
+# Linux x86_64, Python 3.12. Preserve the working hardware/video baseline.
+-c baseline.txt
+-r baseline.txt
+lerobot[feetech,dataset]==0.6.1
+fastapi
+uvicorn
+PyYAML==6.0.3
+wheel==0.48.0

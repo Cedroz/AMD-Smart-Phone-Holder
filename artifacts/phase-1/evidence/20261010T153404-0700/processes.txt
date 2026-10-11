@@ -1,0 +1,588 @@
+    PID COMMAND
+      1 /sbin/init splash
+      2 [kthreadd]
+      3 [pool_workqueue_release]
+      4 [kworker/R-rcu_gp]
+      5 [kworker/R-sync_wq]
+      6 [kworker/R-kvfree_rcu_reclaim]
+      7 [kworker/R-slub_flushwq]
+      8 [kworker/R-netns]
+     10 [kworker/0:0H-kblockd]
+     13 [kworker/R-mm_percpu_wq]
+     14 [ksoftirqd/0]
+     15 [rcu_preempt]
+     16 [rcu_exp_par_gp_kthread_worker/1]
+     17 [rcu_exp_gp_kthread_worker]
+     18 [migration/0]
+     19 [kprobe-optimizer]
+     20 [idle_inject/0]
+     21 [cpuhp/0]
+     22 [cpuhp/1]
+     23 [idle_inject/1]
+     24 [migration/1]
+     25 [ksoftirqd/1]
+     27 [kworker/1:0H-kblockd]
+     28 [cpuhp/2]
+     29 [idle_inject/2]
+     30 [migration/2]
+     31 [ksoftirqd/2]
+     33 [kworker/2:0H-kblockd]
+     34 [cpuhp/3]
+     35 [idle_inject/3]
+     36 [migration/3]
+     37 [ksoftirqd/3]
+     39 [kworker/3:0H-kblockd]
+     40 [cpuhp/4]
+     41 [idle_inject/4]
+     42 [migration/4]
+     43 [ksoftirqd/4]
+     45 [kworker/4:0H-kblockd]
+     46 [cpuhp/5]
+     47 [idle_inject/5]
+     48 [migration/5]
+     49 [ksoftirqd/5]
+     51 [kworker/5:0H-kblockd]
+     52 [cpuhp/6]
+     53 [idle_inject/6]
+     54 [migration/6]
+     55 [ksoftirqd/6]
+     57 [kworker/6:0H-kblockd]
+     58 [cpuhp/7]
+     59 [idle_inject/7]
+     60 [migration/7]
+     61 [ksoftirqd/7]
+     63 [kworker/7:0H-kblockd]
+     64 [cpuhp/8]
+     65 [idle_inject/8]
+     66 [migration/8]
+     67 [ksoftirqd/8]
+     69 [kworker/8:0H-kblockd]
+     70 [cpuhp/9]
+     71 [idle_inject/9]
+     72 [migration/9]
+     73 [ksoftirqd/9]
+     75 [kworker/9:0H-kblockd]
+     76 [cpuhp/10]
+     77 [idle_inject/10]
+     78 [migration/10]
+     79 [ksoftirqd/10]
+     81 [kworker/10:0H-kblockd]
+     82 [cpuhp/11]
+     83 [idle_inject/11]
+     84 [migration/11]
+     85 [ksoftirqd/11]
+     87 [kworker/11:0H-kblockd]
+     88 [cpuhp/12]
+     89 [idle_inject/12]
+     90 [migration/12]
+     91 [ksoftirqd/12]
+     93 [kworker/12:0H-kblockd]
+     94 [cpuhp/13]
+     95 [idle_inject/13]
+     96 [migration/13]
+     97 [ksoftirqd/13]
+     99 [kworker/13:0H-kblockd]
+    100 [cpuhp/14]
+    101 [idle_inject/14]
+    102 [migration/14]
+    103 [ksoftirqd/14]
+    105 [kworker/14:0H-kblockd]
+    106 [cpuhp/15]
+    107 [idle_inject/15]
+    108 [migration/15]
+    109 [ksoftirqd/15]
+    111 [kworker/15:0H-kblockd]
+    112 [cpuhp/16]
+    113 [idle_inject/16]
+    114 [migration/16]
+    115 [ksoftirqd/16]
+    117 [kworker/16:0H-kblockd]
+    118 [rcu_exp_par_gp_kthread_worker/2]
+    119 [cpuhp/17]
+    120 [idle_inject/17]
+    121 [migration/17]
+    122 [ksoftirqd/17]
+    124 [kworker/17:0H-kblockd]
+    125 [cpuhp/18]
+    126 [idle_inject/18]
+    127 [migration/18]
+    128 [ksoftirqd/18]
+    130 [kworker/18:0H-kblockd]
+    131 [cpuhp/19]
+    132 [idle_inject/19]
+    133 [migration/19]
+    134 [ksoftirqd/19]
+    136 [kworker/19:0H-kblockd]
+    137 [cpuhp/20]
+    138 [idle_inject/20]
+    139 [migration/20]
+    140 [ksoftirqd/20]
+    142 [kworker/20:0H-kblockd]
+    143 [cpuhp/21]
+    144 [idle_inject/21]
+    145 [migration/21]
+    146 [ksoftirqd/21]
+    148 [kworker/21:0H-kblockd]
+    149 [cpuhp/22]
+    150 [idle_inject/22]
+    151 [migration/22]
+    152 [ksoftirqd/22]
+    154 [kworker/22:0H-kblockd]
+    155 [cpuhp/23]
+    156 [idle_inject/23]
+    157 [migration/23]
+    158 [ksoftirqd/23]
+    160 [kworker/23:0H-kblockd]
+    161 [cpuhp/24]
+    162 [idle_inject/24]
+    163 [migration/24]
+    164 [ksoftirqd/24]
+    166 [kworker/24:0H-kblockd]
+    167 [cpuhp/25]
+    168 [idle_inject/25]
+    169 [migration/25]
+    170 [ksoftirqd/25]
+    172 [kworker/25:0H-kblockd]
+    173 [cpuhp/26]
+    174 [idle_inject/26]
+    175 [migration/26]
+    176 [ksoftirqd/26]
+    178 [kworker/26:0H]
+    179 [cpuhp/27]
+    180 [idle_inject/27]
+    181 [migration/27]
+    182 [ksoftirqd/27]
+    184 [kworker/27:0H-kblockd]
+    185 [cpuhp/28]
+    186 [idle_inject/28]
+    187 [migration/28]
+    188 [ksoftirqd/28]
+    189 [kworker/28:0-events]
+    190 [kworker/28:0H-kblockd]
+    191 [cpuhp/29]
+    192 [idle_inject/29]
+    193 [migration/29]
+    194 [ksoftirqd/29]
+    196 [kworker/29:0H-kblockd]
+    197 [cpuhp/30]
+    198 [idle_inject/30]
+    199 [migration/30]
+    200 [ksoftirqd/30]
+    202 [kworker/30:0H-kblockd]
+    203 [cpuhp/31]
+    204 [idle_inject/31]
+    205 [migration/31]
+    206 [ksoftirqd/31]
+    207 [kworker/31:0-events]
+    208 [kworker/31:0H-kblockd]
+    211 [kdevtmpfs]
+    212 [kworker/R-inet_frag_wq]
+    213 [rcu_tasks_kthread]
+    214 [rcu_tasks_rude_kthread]
+    215 [kauditd]
+    216 [khungtaskd]
+    217 [oom_reaper]
+    220 [kworker/R-writeback]
+    221 [kcompactd0]
+    222 [ksmd]
+    223 [khugepaged]
+    224 [kworker/R-kblockd]
+    225 [kworker/R-blkcg_punt_bio]
+    226 [kworker/R-kintegrityd]
+    227 [irq/9-acpi]
+    229 [kworker/R-tpm_dev_wq]
+    230 [kworker/R-ata_sff]
+    231 [kworker/R-md_bitmap]
+    232 [kworker/R-md_llbitmap_io]
+    233 [kworker/R-md_llbitmap_unplug]
+    234 [kworker/R-edac-poller]
+    236 [kworker/R-devfreq_wq]
+    237 [watchdogd]
+    239 [kworker/R-quota_events_unbound]
+    242 [kworker/8:1-mm_percpu_wq]
+    243 [kworker/25:1-mm_percpu_wq]
+    244 [irq/27-AMD-Vi]
+    246 [kswapd0]
+    247 [ecryptfs-kthread]
+    249 [kworker/R-kthrotld]
+    250 [kworker/u131:0-hci0]
+    251 [irq/36-pciehp]
+    252 [irq/37-pciehp]
+    253 [irq/47-pciehp]
+    254 [irq/49-pciehp]
+    255 [kworker/R-acpi_thermal_pm]
+    256 [kworker/R-mld]
+    257 [kworker/R-ipv6_addrconf]
+    258 [kworker/R-kstrp]
+    261 [kworker/1:1-mm_percpu_wq]
+    264 [kworker/14:1-mm_percpu_wq]
+    265 [kworker/29:1-mm_percpu_wq]
+    269 [kworker/17:1-cgroup_free]
+    270 [kworker/21:1-mm_percpu_wq]
+    271 [kworker/28:1-mm_percpu_wq]
+    272 [kworker/31:1-mm_percpu_wq]
+    275 [kworker/u133:0-uvcvideo]
+    283 [kworker/12:2-mm_percpu_wq]
+    293 [kworker/R-charger_manager]
+    294 [irq/28-ACPI:Event]
+    295 [irq/29-ACPI:Event]
+    296 [irq/30-ACPI:Event]
+    297 [irq/31-ACPI:Event]
+    298 [irq/32-ACPI:Event]
+    299 [irq/33-ACPI:Event]
+    300 [irq/34-ACPI:Event]
+    301 [irq/35-ACPI:Event]
+    327 [kworker/13:1-mm_percpu_wq]
+    390 [kworker/20:1-mm_percpu_wq]
+    403 [kworker/R-nvme-wq]
+    404 [kworker/R-nvme-reset-wq]
+    405 [kworker/R-nvme-delete-wq]
+    406 [kworker/R-nvme-auth-wq]
+    409 [kworker/22:1-mm_percpu_wq]
+    414 [kworker/17:2-mm_percpu_wq]
+    417 [kworker/6:2-mm_percpu_wq]
+    419 [kworker/23:2-mm_percpu_wq]
+    420 [kworker/26:1-cgroup_bpf_destroy]
+    421 [kworker/30:1-mm_percpu_wq]
+    422 [kworker/15:1-mm_percpu_wq]
+    423 [kworker/27:1-mm_percpu_wq]
+    425 [kworker/18:1-mm_percpu_wq]
+    437 [kworker/R-amdgpu-reset-dev]
+    438 [kworker/R-ttm]
+    441 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    442 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    443 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    444 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    445 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    446 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    447 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    448 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    449 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    450 [kworker/R-amdgpu_dm_hpd_rx_offload_wq]
+    451 [kworker/R-dm_vblank_control_workqueue]
+    452 [kworker/R-amdgpu_dm_hpd_wq]
+    453 [card1-crtc0]
+    454 [card1-crtc1]
+    455 [card1-crtc2]
+    456 [card1-crtc3]
+    457 [kworker/R-gfx_0.0.0]
+    458 [kworker/R-comp_1.0.0]
+    459 [kworker/R-comp_1.1.0]
+    460 [kworker/R-comp_1.2.0]
+    461 [kworker/R-comp_1.3.0]
+    462 [kworker/R-comp_1.0.1]
+    463 [kworker/R-comp_1.1.1]
+    464 [kworker/R-comp_1.2.1]
+    465 [kworker/R-comp_1.3.1]
+    466 [kworker/R-sdma0]
+    467 [kworker/R-vcn_unified_0]
+    468 [kworker/R-vcn_unified_1]
+    469 [kworker/R-jpeg_dec_0]
+    470 [kworker/R-jpeg_dec_1]
+    471 [kworker/R-vpe]
+    713 [kworker/R-uas]
+    731 [kworker/u132:1-ttm]
+    750 [kworker/3:1H-kblockd]
+    751 [kworker/19:1H-kblockd]
+    752 [kworker/26:1H-kblockd]
+    753 [kworker/7:1H-kblockd]
+    786 [kworker/2:1H-kblockd]
+    787 [kworker/18:1H-kblockd]
+    789 [jbd2/nvme0n1p2-8]
+    790 [kworker/R-ext4-rsv-conversion]
+    853 /usr/lib/systemd/systemd-journald
+    884 [kworker/R-rpciod]
+    885 [kworker/R-xprtiod]
+    891 [kworker/1:1H-kblockd]
+    894 [kworker/25:1H-kblockd]
+    898 [kworker/27:1H-kblockd]
+    918 /usr/lib/systemd/systemd-udevd
+    919 [kworker/0:1H-kblockd]
+    920 [kworker/17:1H-kblockd]
+    927 [psimon]
+   1216 [kworker/R-cfg80211]
+   1249 [kworker/24:3-mm_percpu_wq]
+   1252 [kworker/R-notifier_wq]
+   1260 [kworker/10:1H-kblockd]
+   1265 [kworker/23:1H-kblockd]
+   1272 [kworker/4:1H-kblockd]
+   1279 [kworker/6:1H-kblockd]
+   1287 [kworker/21:1H-kblockd]
+   1299 [kworker/20:1H-kblockd]
+   1329 [kworker/20:2-inode_switch_wbs]
+   1338 [kworker/u131:1-hci0]
+   1355 [kworker/5:1H-kblockd]
+   1391 [napi/phy0-0]
+   1392 [napi/phy0-0]
+   1532 /sbin/rpcbind -f -w
+   1533 /usr/lib/systemd/systemd-oomd
+   1534 /usr/lib/systemd/systemd-resolved
+   1535 /usr/lib/systemd/systemd-timesyncd
+   1541 /usr/sbin/blkmapd
+   1543 /usr/sbin/nfsdcld
+   1547 [mt76-tx phy0]
+   1551 [kworker/16:3-mm_percpu_wq]
+   1565 [kworker/22:1H-kblockd]
+   1594 [kworker/29:1H-kblockd]
+   1595 [kworker/16:1H-kblockd]
+   1596 [kworker/28:1H-kblockd]
+   1602 avahi-daemon: running [aup-ff2.local]
+   1603 /usr/libexec/bluetooth/bluetoothd
+   1604 @dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+   1607 /usr/sbin/fsidd
+   1608 /usr/libexec/gnome-remote-desktop-daemon --system
+   1612 /usr/lib/polkit-1/polkitd --no-debug
+   1613 /usr/libexec/power-profiles-daemon
+   1619 /snap/snapd/current/usr/lib/snapd/snapd
+   1628 /usr/libexec/accounts-daemon
+   1629 /usr/libexec/switcheroo-control
+   1631 /usr/lib/systemd/systemd-logind
+   1633 /usr/libexec/udisks2/udisksd
+   1639 avahi-daemon: chroot helper
+   1701 /usr/sbin/rsyslogd -n -iNONE
+   1720 /usr/sbin/NetworkManager --no-daemon
+   1759 /usr/sbin/wpa_supplicant -u -s -O DIR=/run/wpa_supplicant GROUP=netdev
+   1763 /usr/sbin/ModemManager
+   1765 /usr/libexec/boltd
+   1777 [kworker/11:1H-kblockd]
+   1778 [kworker/9:1H-kblockd]
+   1882 [kworker/24:1H-kblockd]
+   1885 [kworker/15:1H-kblockd]
+   1934 [kworker/12:1H-kblockd]
+   1952 [kworker/31:1H-kblockd]
+   1953 [kworker/14:1H-kblockd]
+   1960 /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+   2000 [kworker/13:1H-kblockd]
+   2019 /usr/sbin/rpc.idmapd
+   2020 /usr/sbin/rpc.statd
+   2021 /usr/sbin/rpc.mountd
+   2028 [lockd]
+   2037 [kworker/R-nfsiod]
+   2041 /usr/local/bin/k3s agent
+   2047 [nfsd]
+   2048 [nfsd]
+   2049 [nfsd]
+   2050 [nfsd]
+   2051 [nfsd]
+   2052 [nfsd]
+   2053 [nfsd]
+   2054 [nfsd]
+   2070 /usr/sbin/cron -f -P
+   2074 /usr/sbin/kerneloops --test
+   2081 /usr/sbin/kerneloops
+   2086 /usr/sbin/gdm3
+   2098 gdm-session-worker [pam/gdm-autologin]
+   2113 /usr/lib/systemd/systemd --user
+   2116 (sd-pam)
+   2140 /usr/bin/pipewire
+   2141 /usr/bin/pipewire -c filter-chain.conf
+   2144 /usr/bin/wireplumber
+   2145 /usr/bin/pipewire-pulse
+   2146 /usr/bin/gnome-keyring-daemon --foreground --components=pkcs11,secrets --control-directory=/run/user/1000/keyring
+   2152 /usr/bin/dbus-daemon --session --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+   2184 /usr/libexec/rtkit-daemon
+   2192 /usr/libexec/xdg-document-portal
+   2197 /usr/libexec/gdm-wayland-session env GNOME_SHELL_SESSION_MODE=ubuntu /usr/bin/gnome-session --session=ubuntu
+   2207 /usr/libexec/xdg-permission-store
+   2212 /usr/libexec/gnome-session-binary --session=ubuntu
+   2229 fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+   2279 /usr/libexec/gcr-ssh-agent --base-dir /run/user/1000/gcr
+   2280 /usr/libexec/gnome-session-ctl --monitor
+   2294 /usr/libexec/gvfsd
+   2302 /usr/libexec/gvfsd-fuse /run/user/1000/gvfs -f
+   2305 /usr/libexec/gnome-session-binary --systemd-service --session=ubuntu
+   2322 [krfcommd]
+   2343 /usr/bin/gnome-shell
+   2344 /usr/libexec/at-spi-bus-launcher --launch-immediately
+   2358 /usr/bin/dbus-daemon --config-file=/usr/share/defaults/at-spi2/accessibility.conf --nofork --print-address 11 --address=unix:path=/run/user/1000/at-spi/bus
+   2391 [kworker/8:1H-kblockd]
+   2447 /usr/libexec/at-spi2-registryd --use-gnome-session
+   2448 /usr/libexec/colord
+   2479 /usr/libexec/gnome-shell-calendar-server
+   2490 /usr/bin/gjs -m /usr/share/gnome-shell/org.gnome.Shell.Notifications
+   2512 /usr/libexec/evolution-source-registry
+   2513 /usr/libexec/upowerd
+   2515 /usr/bin/ibus-daemon --panel disable
+   2516 /usr/libexec/gsd-a11y-settings
+   2517 /usr/libexec/gsd-color
+   2518 /usr/libexec/gsd-datetime
+   2519 /usr/libexec/gsd-housekeeping
+   2520 /usr/libexec/gsd-keyboard
+   2522 /usr/libexec/gsd-media-keys
+   2525 /usr/libexec/gsd-power
+   2527 /usr/libexec/gsd-print-notifications
+   2528 /usr/libexec/gsd-rfkill
+   2529 /usr/libexec/gsd-screensaver-proxy
+   2531 /usr/libexec/gsd-sharing
+   2532 /usr/libexec/gsd-smartcard
+   2534 /usr/libexec/gsd-sound
+   2536 /usr/libexec/gsd-wacom
+   2583 /usr/libexec/gvfs-udisks2-volume-monitor
+   2614 /usr/libexec/gsd-printer
+   2617 /usr/libexec/gvfs-goa-volume-monitor
+   2634 /usr/libexec/ibus-dconf
+   2640 /usr/libexec/goa-daemon
+   2642 /usr/libexec/gsd-disk-utility-notify
+   2654 /usr/libexec/evolution-data-server/evolution-alarm-notify
+   2666 /usr/libexec/ibus-extension-gtk3
+   2713 /usr/libexec/ibus-portal
+   2737 /usr/libexec/goa-identity-service
+   2762 /usr/libexec/gvfs-mtp-volume-monitor
+   2778 /usr/libexec/gvfs-gphoto2-volume-monitor
+   2783 /usr/libexec/gvfs-afc-volume-monitor
+   2802 /usr/libexec/evolution-calendar-factory
+   2805 /usr/libexec/ibus-engine-simple
+   2829 /usr/libexec/dconf-service
+   2840 /usr/libexec/evolution-addressbook-factory
+   2871 /usr/libexec/gvfsd-trash --spawner :1.20 /org/gtk/gvfs/exec_spaw/0
+   2906 /usr/bin/gjs -m /usr/share/gnome-shell/org.gnome.ScreenSaver
+   2922 /usr/libexec/tracker-miner-fs-3
+   2924 /usr/libexec/xdg-desktop-portal
+   2934 /usr/libexec/xdg-desktop-portal-gnome
+   2959 /usr/libexec/xdg-desktop-portal-gtk
+   2994 /usr/libexec/gvfsd-metadata
+   3036 /snap/snapd-desktop-integration/391/usr/bin/user-session-helper /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration
+   3114 /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration
+   3168 [kworker/u132:2-ttm]
+   3178 /usr/libexec/gnome-terminal-server
+   3185 bash
+   3237 /usr/bin/update-notifier
+   3291 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+   3377 [kworker/26:2-mm_percpu_wq]
+   3907 [kworker/30:1H-kblockd]
+   5089 /usr/libexec/fwupd/fwupd
+   5496 [kworker/19:2-mm_percpu_wq]
+   5586 /usr/sbin/cupsd -l
+   5597 [kworker/11:0-events]
+   5600 /usr/sbin/cups-browsed
+   5947 [kworker/11:1]
+   6038 [kworker/19:0]
+   7269 [kworker/0:0-mm_percpu_wq]
+   7293 [kworker/10:0]
+   7803 [kworker/10:2-mm_percpu_wq]
+   8131 /snap/firmware-updater/262/bin/firmware-notifier
+   8819 [kworker/0:1]
+   9089 [kworker/9:0]
+   9173 [kworker/4:0-cgroup_free]
+   9362 [kworker/R-tls-strp]
+   9364 /usr/bin/python3 /usr/lib/ubuntu-release-upgrader/check-new-release-gtk
+   9507 /home/aup/.vscode-server/code-2a59476c9bfcb90b3ddc372c36762471b7dfad1c --cli-data-dir /home/aup/.vscode-server/cli agent host
+   9551 sh /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/bin/code-server --connection-token=remotessh --accept-server-license-terms --agent-host-bridge-port=38141 --agent-host-bridge-host=127.0.0.1 --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-d48b1115-e608-4063-80fd-1cd43407b16c
+   9555 /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/node /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/out/server-main.js --connection-token=remotessh --accept-server-license-terms --agent-host-bridge-port=38141 --agent-host-bridge-host=127.0.0.1 --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-d48b1115-e608-4063-80fd-1cd43407b16c
+   9586 sh /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/bin/code-server --socket-path /tmp/code-1d27bbc8-2a83-4f77-80af-793599501ccb --agent-host-path /tmp/code-76580407-162e-4549-b0ea-129bcf1bc477 --start-server --accept-server-license-terms --enable-remote-auto-shutdown --without-connection-token
+   9591 /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/node /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/out/server-main.js --socket-path /tmp/code-1d27bbc8-2a83-4f77-80af-793599501ccb --agent-host-path /tmp/code-76580407-162e-4549-b0ea-129bcf1bc477 --start-server --accept-server-license-terms --enable-remote-auto-shutdown --without-connection-token
+   9656 /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/node /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/out/bootstrap-fork --type=agentHost --logsPath /home/aup/.vscode-server/data/logs/20261010T131702 --user-data-dir /home/aup/.vscode-server/data --telemetry-level all
+   9705 /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/node /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/out/bootstrap-fork --type=ptyHost --logsPath /home/aup/.vscode-server/data/logs/20261010T131702
+   9740 /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/node_modules/@github/copilot-sdk-linux-x64/prebuilds/linux-x64/copilot-runtime --headless --no-auto-update --log-level info --stdio --no-auto-login
+  10123 /bin/bash --init-file /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+  11053 [kworker/5:1-mm_percpu_wq]
+  11101 sshd: aup [priv]
+  11144 sshd: aup@notty
+  11145 -bash
+  11153 sh
+  11225 /home/aup/.vscode-server/code-a44adf7f53e00964ab890f9f8758a334f1fc15bc command-shell --cli-data-dir /home/aup/.vscode-server/cli --parent-process-id 11153 --on-host=127.0.0.1 --on-port
+  11304 sh /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/bin/code-server --connection-token=remotessh --accept-server-license-terms --agent-host-bridge-port=38141 --agent-host-bridge-host=127.0.0.1 --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-ba714ccf-7bc0-4fe3-817d-d302df22d4c4
+  11308 /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/node /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/out/server-main.js --connection-token=remotessh --accept-server-license-terms --agent-host-bridge-port=38141 --agent-host-bridge-host=127.0.0.1 --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-ba714ccf-7bc0-4fe3-817d-d302df22d4c4
+  11366 /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/node /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/out/bootstrap-fork --type=ptyHost --logsPath /home/aup/.vscode-server/data/logs/20261010T134140
+  11442 sshd: aup [priv]
+  11487 sshd: aup@notty
+  11488 -bash
+  11496 sh
+  11568 /home/aup/.vscode-server/code-7debcd0e2acdea1c52de81bf9ee1620444407dda command-shell --cli-data-dir /home/aup/.vscode-server/cli --parent-process-id 11496 --on-host=127.0.0.1 --on-port
+  11684 sh /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/bin/code-server --connection-token=remotessh --accept-server-license-terms --agent-host-bridge-port=38141 --agent-host-bridge-host=127.0.0.1 --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-e87934bc-ca83-4961-94ee-fb9a0136e2f4
+  11688 /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/node /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/out/server-main.js --connection-token=remotessh --accept-server-license-terms --agent-host-bridge-port=38141 --agent-host-bridge-host=127.0.0.1 --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-e87934bc-ca83-4961-94ee-fb9a0136e2f4
+  11714 /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/node /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/out/bootstrap-fork --type=fileWatcher
+  11736 /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/node --dns-result-order=ipv4first /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/out/bootstrap-fork --type=extensionHost --transformURIs --useHostProxy=false
+  11748 /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/node /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/out/bootstrap-fork --type=ptyHost --logsPath /home/aup/.vscode-server/data/logs/20261010T134332
+  12507 [kworker/6:1]
+  12614 sshd: aup [priv]
+  12657 sshd: aup@notty
+  12658 sh
+  12676 /home/aup/.vscode-server/code-2a59476c9bfcb90b3ddc372c36762471b7dfad1c command-shell --cli-data-dir /home/aup/.vscode-server/cli --parent-process-id 12658 --on-host=127.0.0.1 --on-port
+  12729 /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/node --dns-result-order=ipv4first /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/out/bootstrap-fork --type=extensionHost --transformURIs --useHostProxy=false
+  12741 /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/node /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/out/bootstrap-fork --type=fileWatcher
+  12807 /bin/sh
+  13067 [kworker/27:0]
+  14240 [kworker/24:1]
+  14377 [psimon]
+  14388 /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/node /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/extensions/json-language-features/server/dist/node/jsonServerMain --node-ipc --clientProcessId=12729
+  15900 [kworker/16:1]
+  16569 /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/node --dns-result-order=ipv4first /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/out/bootstrap-fork --type=extensionHost --transformURIs --useHostProxy=false
+  16581 /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/node /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/out/bootstrap-fork --type=fileWatcher
+  16726 /bin/bash --init-file /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+  16799 /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/node --dns-result-order=ipv4first /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/out/bootstrap-fork --type=extensionHost --transformURIs --useHostProxy=false
+  16811 /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/node /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/out/bootstrap-fork --type=fileWatcher
+  16899 /bin/bash --init-file /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+  16949 /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/node /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/extensions/markdown-language-features/dist/serverWorkerMain --node-ipc --clientProcessId=16569
+  16987 /bin/bash --init-file /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+  17103 /home/aup/.vscode-server/extensions/ms-python.python-2026.8.0-linux-x64/python-env-tools/bin/pet server
+  17325 /bin/bash --init-file /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+  17351 /home/aup/.vscode-server/extensions/ms-python.python-2026.8.0-linux-x64/python-env-tools/bin/pet server
+  17611 /usr/bin/python3 /home/aup/.vscode-server/extensions/ms-python.python-2026.8.0-linux-x64/python_files/run-jedi-language-server.py
+  17612 /bin/bash --init-file /home/aup/.vscode-server/cli/servers/Stable-2a59476c9bfcb90b3ddc372c36762471b7dfad1c/server/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+  17658 /home/aup/.vscode-server/extensions/ms-python.vscode-python-envs-1.38.0-linux-x64/python-env-tools/bin/pet server
+  17755 /home/aup/.vscode-server/extensions/ms-python.vscode-python-envs-1.38.0-linux-x64/python-env-tools/bin/pet server
+  18098 [kworker/3:2-mm_percpu_wq]
+  18146 /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/node /home/aup/.vscode-server/cli/servers/Stable-7debcd0e2acdea1c52de81bf9ee1620444407dda/server/extensions/json-language-features/server/dist/node/jsonServerMain --node-ipc --clientProcessId=16569
+  18919 /home/aup/.vscode-server/extensions/openai.chatgpt-26.1007.21434-linux-x64/bin/linux-x86_64/codex -c features.code_mode_host=true app-server --analytics-default-enabled
+  19051 /home/aup/.vscode-server/extensions/openai.chatgpt-26.1007.21434-linux-x64/bin/linux-x86_64/codex -c features.code_mode_host=true app-server --analytics-default-enabled
+  19317 [kworker/30:0]
+  19560 /home/aup/miniforge3/bin/python /home/aup/.vscode-server/extensions/ms-python.python-2026.8.0-linux-x64/python_files/run-jedi-language-server.py
+  20148 /home/aup/.vscode-server/extensions/openai.chatgpt-26.1007.21434-linux-x64/bin/linux-x86_64/codex -c features.code_mode_host=true app-server --analytics-default-enabled
+  21390 [kworker/15:2-cgroup_free]
+  25623 [kworker/23:1-cgroup_free]
+  26606 [kworker/8:0-cgroup_free]
+  26881 /home/aup/.vscode-server/extensions/anthropic.claude-code-2.1.296-linux-x64/resources/native-binary/claude --output-format stream-json --verbose --input-format stream-json --max-thinking-tokens=31999 --permission-prompt-tool=stdio --setting-sources=user,project,local --permission-mode=default --debug --debug-to-stderr --enable-auth-status --no-chrome --replay-user-messages
+  27311 /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/node --dns-result-order=ipv4first /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/out/bootstrap-fork --type=extensionHost --transformURIs --useHostProxy=false
+  27431 /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/node /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/out/bootstrap-fork --type=fileWatcher
+  27507 /home/aup/.vscode-server/extensions/openai.chatgpt-26.1007.21434-linux-x64/bin/linux-x86_64/codex -c features.code_mode_host=true app-server --analytics-default-enabled
+  27650 /home/aup/.vscode-server/extensions/ms-python.vscode-python-envs-1.38.0/python-env-tools/bin/pet server
+  27932 /bin/bash --init-file /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+  28002 /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/node /home/aup/.vscode-server/extensions/ms-python.vscode-pylance-2026.4.1/dist/server.bundle.js --cancellationReceive=file:7913afa71d48592a5922eea83508fea1dc4d0a2701 --node-ipc --clientProcessId=27311
+  28011 [kworker/5:2-cgroup_release]
+  28295 /home/aup/.vscode-server/extensions/openai.chatgpt-26.1007.21434-linux-x64/bin/linux-x86_64/codex-code-mode-host
+  28462 /bin/bash --init-file /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+  29029 [kworker/7:2-mm_percpu_wq]
+  29232 [kworker/14:2-cgroup_free]
+  30198 [kworker/u130:0-flush-259:0]
+  30961 [kworker/9:2-mm_percpu_wq]
+  32127 [kworker/1:0]
+  32885 [kworker/21:2-cgroup_free]
+  33057 [kworker/12:1]
+  33532 [kworker/18:2-cgroup_free]
+  34225 [kworker/29:0]
+  34582 [kworker/25:2]
+  35633 [kworker/3:1-cgroup_free]
+  35634 [kworker/22:0]
+  36879 [kworker/4:2-mm_percpu_wq]
+  37394 [kworker/13:0-cgroup_free]
+  37496 /bin/sh /usr/lib/update-notifier/update-notifier-crash
+  37515 /usr/bin/python3 /usr/share/apport/apport-gtk
+  38114 [kworker/2:0-cgroup_free]
+  38393 [kworker/u130:1-flush-259:0]
+  38625 /usr/bin/python3 /usr/share/apport/apport-gtk
+  38655 [kworker/u128:1-phy0]
+  39174 [kworker/u129:2-flush-259:0]
+  39426 /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/node /home/aup/.vscode-server/cli/servers/Stable-a44adf7f53e00964ab890f9f8758a334f1fc15bc/server/extensions/markdown-language-features/dist/serverWorkerMain --node-ipc --clientProcessId=27311
+  39594 [kworker/2:1-mm_percpu_wq]
+  40349 [kworker/u129:0-flush-259:0]
+  40533 [kworker/u133:2-uvcvideo]
+  40568 [kworker/u130:3-flush-259:0]
+  40800 [kworker/7:0]
+  40943 [kworker/u128:2-mt76]
+  41096 [kworker/u129:3-events_unbound]
+  41118 sshd: aup [priv]
+  41184 sshd: aup@pts/4
+  41185 -bash
+  41312 [kworker/13:2]
+  41392 [kworker/17:0]
+  41402 [kworker/u133:1-uvcvideo]
+  41500 sleep 180
+  41544 python tracker/track.py --dry-run --camera /dev/video2
+  41641 sleep 180
+  41663 sleep 180
+  41671 [kworker/u130:2-writeback]
+  41714 [kworker/5:0-cgroup_free]
+  41724 /bin/bash -c mkdir -p requirements config src/followme artifacts/phase-1/evidence models .venv/bin/python - <<'PY' from pathlib import Path from datetime import datetime from zoneinfo import ZoneInfo import subprocess,json,hashlib,platform,sys p=Path('artifacts/phase-1/evidence')/datetime.now(ZoneInfo('America/Los_Angeles')).strftime('%Y%m%dT%H%M%S%z') p.mkdir() for cmd,name in [([sys.executable,'-m','pip','freeze','--all'],'baseline-freeze.txt'),([sys.executable,'-m','pip','check'],'baseline-check.txt'),(['ps','-eo','pid,args'],'processes.txt'),(['ffmpeg','-version'],'ffmpeg.txt'),(['/home/aup/miniforge3/bin/conda','list','--explicit'],'native-conda-explicit.txt')]:  r=subprocess.run(cmd,capture_output=True,text=True); (p/name).write_text(r.stdout+r.stderr) (root:=Path('requirements/baseline.txt')).write_text((p/'baseline-freeze.txt').read_text()) cal={} for role,category,identity in [('follower','robots/so_follower','follower_arm'),('leader','teleoperators/so_leader','leader_arm')]:  path=Path.home()/'.cache/huggingface/lerobot/calibration'/category/(identity+'.json')  content=path.read_bytes(); (p/(identity+'.json')).write_bytes(content)  cal[role]={'path':str(path),'sha256':hashlib.sha256(content).hexdigest()} (p/'calibration-hashes.json').write_text(json.dumps(cal,indent=2)) import torch,cv2 (p/'baseline.json').write_text(json.dumps({'platform':platform.platform(),'python':sys.version,'interpreter':sys.executable,'torch_runtime':torch.__version__,'cuda_available':torch.cuda.is_available(),'cuda':torch.version.cuda,'hip':torch.version.hip,'ffmpeg_library_dir':'/home/aup/miniforge3/lib'},indent=2)) (p/'opencv-build.txt').write_text(cv2.getBuildInformation()) Path('artifacts/phase-1/baseline-path.txt').write_text(str(p)+'\n') print(p) PY python3.12 -m venv .venv-tools .venv-tools/bin/python -m pip install pip-tools
+  41726 .venv/bin/python -
+  41729 ps -eo pid,args

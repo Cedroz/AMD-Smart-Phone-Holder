@@ -1,0 +1,7 @@
+# Isolated from LeRobot's opencv-python-headless distribution.
+mediapipe==1.1.0
+opencv-contrib-python
+numpy
+setuptools==81.0.0
+wheel==0.48.0
+pip==26.2.1

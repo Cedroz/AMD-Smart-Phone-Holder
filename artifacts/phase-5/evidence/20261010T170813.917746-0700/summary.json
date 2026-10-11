@@ -1,0 +1,168 @@
+{
+  "backend": "live",
+  "mode": "hold",
+  "controller_mode": "hold",
+  "state": "HOLDING",
+  "current_pose": null,
+  "target_pose": null,
+  "motion_enabled": false,
+  "fault_reason": null,
+  "hold_confirmed": true,
+  "last_reason": "shutdown",
+  "heartbeat_age_s": null,
+  "cooldown_remaining_s": 0,
+  "tracking": {
+    "camera_role": "external",
+    "sequence": 1774,
+    "capture_monotonic_ns": 77806070830296,
+    "processed_monotonic_ns": 77806195352972,
+    "visible": false,
+    "tracking_valid": false,
+    "ambiguous": false,
+    "invalid_reason": "stale",
+    "face_count": 0,
+    "face_center_raw": null,
+    "face_center_filtered": null,
+    "body_center_raw": null,
+    "body_center_filtered": null,
+    "track_generation": 1,
+    "selection_required": true,
+    "candidate_zone": null,
+    "stable_zone": null,
+    "candidate_since_ns": null,
+    "head_yaw_deg": null,
+    "head_pitch_deg": null,
+    "position_source": "face"
+  },
+  "measured": {
+    "shoulder_pan": -19.604395604395606,
+    "shoulder_lift": -100.96703296703296,
+    "elbow_flex": 96.43956043956044,
+    "wrist_flex": -0.7472527472527473,
+    "wrist_roll": 97.36263736263736,
+    "gripper": 0.7493188010899182
+  },
+  "physical_commands": 0,
+  "decision_count": 0,
+  "tracking_behavior": "continuous_centering",
+  "requested_joints": null,
+  "pan_bounds_deg": [
+    -21.604395604395606,
+    -17.604395604395606
+  ],
+  "centering_axes": [
+    "horizontal"
+  ],
+  "direction_calibration": null,
+  "direction_calibration_active": false,
+  "live_response_mapping_validated": false,
+  "perception_mode": "native",
+  "supervisor_error": null,
+  "log_directory": "/home/aup/AMD-Smart-Phone-Holder/artifacts/phase-5/evidence/20261010T170813.917746-0700",
+  "alignment_enabled": false,
+  "live_ready": false,
+  "live_motion_blockers": [
+    "calibrate_camera_direction_first"
+  ],
+  "perception": {
+    "state": {
+      "camera_role": "external",
+      "sequence": 1775,
+      "capture_monotonic_ns": 77806158890277,
+      "processed_monotonic_ns": 77806303908255,
+      "visible": false,
+      "tracking_valid": false,
+      "ambiguous": false,
+      "invalid_reason": "stale",
+      "face_count": 0,
+      "face_center_raw": null,
+      "face_center_filtered": null,
+      "body_center_raw": null,
+      "body_center_filtered": null,
+      "track_generation": 1,
+      "selection_required": true,
+      "candidate_zone": null,
+      "stable_zone": null,
+      "candidate_since_ns": null,
+      "head_yaw_deg": null,
+      "head_pitch_deg": null,
+      "position_source": "face"
+    },
+    "motion_enabled": false,
+    "mode": "hold",
+    "source_modes": {
+      "external": "native_camera"
+    },
+    "timestamp_limitations": null,
+    "zones": {
+      "schema_version": 1,
+      "status": "pending",
+      "camera_path": "/dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0",
+      "rotation": 0,
+      "image_size": [
+        640,
+        480
+      ],
+      "position_source": "face",
+      "margin": 0.03,
+      "regions": {}
+    },
+    "settings": {
+      "schema_version": 1,
+      "capture_width": 640,
+      "capture_height": 480,
+      "capture_fps": 30,
+      "external_hz": 10,
+      "wrist_hz": 0,
+      "inference_width": 640,
+      "freshness_ms": 500,
+      "capture_stall_s": 1,
+      "alpha": 0.25,
+      "dwell_s": 0.75,
+      "max_center_jump": 0.2,
+      "face_threshold": 0.7,
+      "position_source": "face",
+      "rotation": {
+        "external": 0,
+        "wrist": 0
+      }
+    },
+    "worker_error": null,
+    "metrics": {
+      "external": {
+        "capture_frames": 1775,
+        "inferences": 1073,
+        "dropped_frames": 702,
+        "last_sequence": 1775,
+        "capture_fps": 16.382686959480605,
+        "inference_fps": 9.90344963804095,
+        "p50_age_ms": 56.574975,
+        "p95_age_ms": 104.810741,
+        "metadata": {
+          "width": 640.0,
+          "height": 480.0,
+          "reported_fps": 30.0,
+          "source": "/dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0",
+          "timestamp_kind": "device_acquisition",
+          "fourcc": "YUYV"
+        },
+        "error": null
+      },
+      "wrist": {
+        "capture_frames": 0,
+        "inferences": 0,
+        "dropped_frames": 0,
+        "last_sequence": 0,
+        "capture_fps": 0.0,
+        "inference_fps": 0.0,
+        "p50_age_ms": null,
+        "p95_age_ms": null,
+        "metadata": {},
+        "error": "Camera missing"
+      }
+    },
+    "valid_observation_fraction": 0.20833333333333334,
+    "log_directory": "/home/aup/AMD-Smart-Phone-Holder/artifacts/phase-5/evidence/20261010T170813.917746-0700/perception",
+    "elapsed_s": 108.34608537598979
+  }
+}

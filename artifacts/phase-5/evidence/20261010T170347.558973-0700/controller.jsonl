@@ -1,0 +1,1 @@
+{"timestamp_s": 77431.599386723, "session_id": "bf82291d9fc342deb86a2e41aa8c3b9b", "event": "cancel", "reason": "shutdown", "state": "HOLDING", "hold_confirmed": true, "physical_commands": 0, "backend": "fake"}

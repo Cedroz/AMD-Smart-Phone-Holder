@@ -1,0 +1,130 @@
+{
+  "backend": "live",
+  "mode": "hold",
+  "controller_mode": "hold",
+  "state": "HOLDING",
+  "current_pose": null,
+  "target_pose": null,
+  "motion_enabled": false,
+  "fault_reason": null,
+  "hold_confirmed": false,
+  "last_reason": "shutdown",
+  "heartbeat_age_s": null,
+  "cooldown_remaining_s": 0,
+  "tracking": null,
+  "measured": null,
+  "physical_commands": 0,
+  "decision_count": 0,
+  "tracking_behavior": "continuous_centering",
+  "requested_joints": null,
+  "pan_bounds_deg": [
+    14.68131868131868,
+    16.703296703296704
+  ],
+  "centering_axes": [
+    "horizontal"
+  ],
+  "direction_calibration": null,
+  "direction_calibration_active": false,
+  "live_response_mapping_validated": false,
+  "perception_mode": "native",
+  "supervisor_error": null,
+  "log_directory": "/home/aup/AMD-Smart-Phone-Holder/artifacts/phase-5/evidence/20261010T170727.078091-0700",
+  "alignment_enabled": false,
+  "live_ready": false,
+  "live_motion_blockers": [
+    "calibrate_camera_direction_first"
+  ],
+  "perception": {
+    "state": {
+      "camera_role": "external",
+      "sequence": -1,
+      "capture_monotonic_ns": 0,
+      "processed_monotonic_ns": 0,
+      "visible": false,
+      "tracking_valid": false,
+      "ambiguous": false,
+      "invalid_reason": "waiting_for_camera",
+      "face_count": 0,
+      "face_center_raw": null,
+      "face_center_filtered": null,
+      "body_center_raw": null,
+      "body_center_filtered": null,
+      "track_generation": 0,
+      "selection_required": false,
+      "candidate_zone": null,
+      "stable_zone": null,
+      "candidate_since_ns": null,
+      "head_yaw_deg": null,
+      "head_pitch_deg": null,
+      "position_source": "face"
+    },
+    "motion_enabled": false,
+    "mode": "hold",
+    "source_modes": {},
+    "timestamp_limitations": null,
+    "zones": {
+      "schema_version": 1,
+      "status": "pending",
+      "camera_path": "/dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0",
+      "rotation": 0,
+      "image_size": [
+        640,
+        480
+      ],
+      "position_source": "face",
+      "margin": 0.03,
+      "regions": {}
+    },
+    "settings": {
+      "schema_version": 1,
+      "capture_width": 640,
+      "capture_height": 480,
+      "capture_fps": 30,
+      "external_hz": 10,
+      "wrist_hz": 0,
+      "inference_width": 640,
+      "freshness_ms": 500,
+      "capture_stall_s": 1,
+      "alpha": 0.25,
+      "dwell_s": 0.75,
+      "max_center_jump": 0.2,
+      "face_threshold": 0.7,
+      "position_source": "face",
+      "rotation": {
+        "external": 0,
+        "wrist": 0
+      }
+    },
+    "worker_error": null,
+    "metrics": {
+      "external": {
+        "capture_frames": 0,
+        "inferences": 0,
+        "dropped_frames": 0,
+        "last_sequence": 0,
+        "capture_fps": 0.0,
+        "inference_fps": 0.0,
+        "p50_age_ms": null,
+        "p95_age_ms": null,
+        "metadata": {},
+        "error": "Camera missing"
+      },
+      "wrist": {
+        "capture_frames": 0,
+        "inferences": 0,
+        "dropped_frames": 0,
+        "last_sequence": 0,
+        "capture_fps": 0.0,
+        "inference_fps": 0.0,
+        "p50_age_ms": null,
+        "p95_age_ms": null,
+        "metadata": {},
+        "error": "Camera missing"
+      }
+    },
+    "valid_observation_fraction": 0.0,
+    "log_directory": "/home/aup/AMD-Smart-Phone-Holder/artifacts/phase-5/evidence/20261010T170727.078091-0700/perception",
+    "elapsed_s": 0.14585022800019942
+  }
+}

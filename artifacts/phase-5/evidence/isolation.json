@@ -1,0 +1,18 @@
+{
+  "upstream_files_checked": 119,
+  "changed_upstream_implementation_or_configuration": [],
+  "active_service_logs_changed": [
+    "artifacts/phase-2/evidence/active-diagnostics/observations.jsonl"
+  ],
+  "note": "The active Phase 2 diagnostics continues appending its own log; Phase 5 did not write to it.",
+  "phase5_source_sha256": {
+    "src/followme/phase5/planner.py": "1e6d14eb8342ba8efe77ed3b7f1fe65dd788933f3f37c36c08eef2c54ce47f9b",
+    "src/followme/phase5/web.py": "444c61e0215cae2b15e0aece6b5f785c5461595fee9362625593e248a9144e35",
+    "src/followme/phase5/__init__.py": "d38a517da44676872dee3d402b0f5b3b91794175f979fba41005f30fbfe178b8",
+    "src/followme/phase5/replay.py": "7b7141d9cfd4c8191c6ac84317f9c059734ebaa8c39435fc7d2abf27dbdaa574",
+    "src/followme/phase5/__main__.py": "8fd41c0ed9be51a76d1e5a73e210877ced257531483c2623c011de34d7d145e5",
+    "src/followme/phase5/config.py": "d1e7a768d0b5e75c07ff10347a7e48a428efaa19db5793125409e35bce30ae49",
+    "src/followme/phase5/acceptance.py": "57d713b2780bc2f7504ec4e936ef8d3f0ed13e46a5c6ee479ec2d1941e9e9338",
+    "src/followme/phase5/runtime.py": "f454329f14810fcfabed18ab971731975128f5a54d1c1d2ab6a3f1cfd03d1697"
+  }
+}

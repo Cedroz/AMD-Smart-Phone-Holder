@@ -1,0 +1,131 @@
+{
+  "backend": "live",
+  "mode": "hold",
+  "controller_mode": "hold",
+  "state": "FAULT",
+  "current_pose": null,
+  "target_pose": null,
+  "motion_enabled": false,
+  "fault_reason": "worker_dead",
+  "hold_confirmed": false,
+  "last_reason": "shutdown",
+  "heartbeat_age_s": null,
+  "cooldown_remaining_s": 0,
+  "tracking": {
+    "camera_role": "external",
+    "sequence": 1270,
+    "capture_monotonic_ns": 78406123834605,
+    "visible": true,
+    "tracking_valid": true,
+    "ambiguous": false,
+    "selection_required": false,
+    "track_generation": 0,
+    "candidate_zone": null,
+    "stable_zone": null,
+    "face_center_filtered": [
+      0.5550952426537867,
+      0.15190583321705292
+    ],
+    "tracking_center": [
+      0.5550952426537867,
+      0.15190583321705292
+    ],
+    "target_kind": "face",
+    "detections": 2,
+    "target_selection": "largest_then_nearest",
+    "invalid_reason": null
+  },
+  "measured": {
+    "shoulder_pan": -20.65934065934066,
+    "shoulder_lift": -89.01098901098901,
+    "elbow_flex": 96.35164835164835,
+    "wrist_flex": 5.230769230769231,
+    "wrist_roll": 97.36263736263736,
+    "gripper": 0.8174386920980926
+  },
+  "physical_commands": 2,
+  "decision_count": 0,
+  "tracking_behavior": "continuous_centering",
+  "requested_joints": null,
+  "pan_bounds_deg": [
+    -22.65934065934066,
+    -18.65934065934066
+  ],
+  "centering_axes": [
+    "horizontal",
+    "vertical"
+  ],
+  "joint_bounds_deg": {
+    "shoulder_pan": [
+      -22.65934065934066,
+      -18.65934065934066
+    ],
+    "wrist_flex": [
+      4.142857142857143,
+      6.142857142857143
+    ]
+  },
+  "direction_calibration": null,
+  "direction_calibration_active": false,
+  "live_response_mapping_validated": false,
+  "direction_source": "track.py default signs",
+  "perception_mode": "native",
+  "supervisor_error": "robot_worker_failure",
+  "log_directory": "/home/aup/AMD-Smart-Phone-Holder/artifacts/phase-5/evidence/20261010T171844.455349-0700",
+  "alignment_enabled": false,
+  "live_ready": false,
+  "live_motion_blockers": [],
+  "perception": {
+    "state": {
+      "camera_role": "external",
+      "sequence": 3350,
+      "capture_monotonic_ns": 78531610372442,
+      "visible": false,
+      "tracking_valid": false,
+      "ambiguous": false,
+      "selection_required": false,
+      "track_generation": 0,
+      "candidate_zone": null,
+      "stable_zone": null,
+      "face_center_filtered": null,
+      "tracking_center": null,
+      "target_kind": null,
+      "detections": 0,
+      "target_selection": "largest_then_nearest",
+      "invalid_reason": "target_missing_or_stale"
+    },
+    "source_modes": {
+      "external": "native_camera"
+    },
+    "worker_error": null,
+    "metrics": {
+      "external": {
+        "inferences": 2017,
+        "error": null,
+        "inference_fps": 9.927388816015048
+      }
+    },
+    "settings": {
+      "schema_version": 1,
+      "capture_width": 640,
+      "capture_height": 480,
+      "capture_fps": 30,
+      "external_hz": 10,
+      "wrist_hz": 0,
+      "inference_width": 640,
+      "freshness_ms": 500,
+      "capture_stall_s": 1,
+      "alpha": 0.25,
+      "dwell_s": 0.75,
+      "max_center_jump": 0.2,
+      "face_threshold": 0.7,
+      "position_source": "face",
+      "rotation": {
+        "external": 0,
+        "wrist": 0
+      }
+    },
+    "detector": "track.py face/body",
+    "mode": "hold"
+  }
+}

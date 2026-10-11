@@ -1,0 +1,20 @@
+schema_version: 1
+vision_python: .venv-vision/bin/python
+mediapipe_version: 1.1.0
+model_path: models/face_landmarker.task
+model_manifest: models/manifest.json
+ffmpeg_library_dir: /home/aup/miniforge3/lib
+dry_run: true
+mode: hold
+autonomous_motion_approved: false
+host: 169.233.72.8
+cameras:
+  external: /dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0
+  wrist: /dev/v4l/by-id/usb-icSpring_icspring_camera_202404160005-video-index0
+arms:
+  follower:
+    port: /dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128613-if00
+    calibration_id: follower_arm
+  leader:
+    port: /dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128105-if00
+    calibration_id: leader_arm

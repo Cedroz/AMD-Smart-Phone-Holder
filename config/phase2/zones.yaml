@@ -1,0 +1,9 @@
+schema_version: 1
+status: pending
+camera_path: /dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0
+rotation: 0
+image_size: [640, 480]
+position_source: face
+margin: 0.03
+regions: {}
+# Populate through followme calibrate-zones. No invented workstation bounds.

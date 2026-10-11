@@ -1,0 +1,16 @@
+{
+  "unit_tests_run": 39,
+  "unit_tests_passed": true,
+  "backend": "fake",
+  "physical_commands": 0,
+  "live_movement_tested": false,
+  "seed": 3101,
+  "healthy_io_delay_range_s": [
+    0.0,
+    0.002
+  ],
+  "cancel_target_s": 0.25,
+  "trials": 100,
+  "max_handling_latency_s": 0.049599656005739234,
+  "passed": true
+}

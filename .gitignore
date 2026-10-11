@@ -218,3 +218,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# FollowMe local environments and downloaded model bundle
+.venv-*/
+models/*.task
+models/*.tmp
+tracker/models/faces.npz
+tracker/models/faces.tmp
+tracker/models/face_recognition_sface_2021dec.onnx
+build/
+*.egg-info/

@@ -1,0 +1,11 @@
+{
+  "description": "Template only. Replace timestamps with independent live trial observations; extend to ten alternating trials and 120 seconds of stationary work per station.",
+  "transitions": [
+    {"zone": "station_a", "entry_monotonic_ns": 0, "exit_monotonic_ns": 3000000000},
+    {"zone": "station_b", "entry_monotonic_ns": 3000000000, "exit_monotonic_ns": 6000000000}
+  ],
+  "stationary": [
+    {"zone": "station_a", "start_monotonic_ns": 0, "end_monotonic_ns": 120000000000},
+    {"zone": "station_b", "start_monotonic_ns": 120000000000, "end_monotonic_ns": 240000000000}
+  ]
+}

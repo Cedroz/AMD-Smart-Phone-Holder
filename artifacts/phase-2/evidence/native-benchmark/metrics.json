@@ -1,0 +1,106 @@
+{
+  "state": {
+    "camera_role": "external",
+    "sequence": 2271,
+    "capture_monotonic_ns": 73261849707882,
+    "processed_monotonic_ns": 73262140295586,
+    "visible": false,
+    "tracking_valid": false,
+    "ambiguous": false,
+    "invalid_reason": "stale",
+    "face_count": 0,
+    "face_center_raw": null,
+    "face_center_filtered": null,
+    "body_center_raw": null,
+    "body_center_filtered": null,
+    "track_generation": 0,
+    "selection_required": true,
+    "candidate_zone": null,
+    "stable_zone": null,
+    "candidate_since_ns": null,
+    "head_yaw_deg": null,
+    "head_pitch_deg": null,
+    "position_source": "face"
+  },
+  "motion_enabled": false,
+  "mode": "hold",
+  "source_mode": "native_camera",
+  "timestamp_limitations": null,
+  "zones": {
+    "schema_version": 1,
+    "status": "pending",
+    "camera_path": "/dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0",
+    "rotation": 0,
+    "image_size": [
+      640,
+      480
+    ],
+    "position_source": "face",
+    "margin": 0.03,
+    "regions": {}
+  },
+  "settings": {
+    "schema_version": 1,
+    "capture_width": 640,
+    "capture_height": 480,
+    "capture_fps": 30,
+    "external_hz": 10,
+    "wrist_hz": 0,
+    "inference_width": 640,
+    "freshness_ms": 500,
+    "capture_stall_s": 1,
+    "alpha": 0.25,
+    "dwell_s": 0.75,
+    "max_center_jump": 0.2,
+    "face_threshold": 0.7,
+    "position_source": "face",
+    "rotation": {
+      "external": 0,
+      "wrist": 0
+    }
+  },
+  "worker_error": null,
+  "metrics": {
+    "external": {
+      "capture_frames": 2272,
+      "inferences": 1201,
+      "dropped_frames": 1070,
+      "last_sequence": 2272,
+      "capture_fps": 18.747874180804885,
+      "inference_fps": 9.910297927441315,
+      "p50_age_ms": 48.06018,
+      "p95_age_ms": 75.703542,
+      "metadata": {
+        "width": 640.0,
+        "height": 480.0,
+        "reported_fps": 30.0,
+        "source": "/dev/v4l/by-id/usb-icSpring_icspring_camera-video-index0",
+        "timestamp_kind": "device_acquisition",
+        "fourcc": "YUYV"
+      },
+      "error": null
+    },
+    "wrist": {
+      "capture_frames": 1226,
+      "inferences": 0,
+      "dropped_frames": 0,
+      "last_sequence": 1226,
+      "capture_fps": 10.116590557071651,
+      "inference_fps": 0.0,
+      "p50_age_ms": null,
+      "p95_age_ms": null,
+      "metadata": {
+        "width": 640.0,
+        "height": 480.0,
+        "reported_fps": 30.0,
+        "source": "/dev/v4l/by-id/usb-icSpring_icspring_camera_202404160005-video-index0",
+        "timestamp_kind": "device_acquisition",
+        "fourcc": "MJPG"
+      },
+      "error": null
+    }
+  },
+  "valid_observation_fraction": 0.0,
+  "log_directory": "artifacts/phase-2/evidence/native-benchmark",
+  "elapsed_s": 121.18707316300424
+}

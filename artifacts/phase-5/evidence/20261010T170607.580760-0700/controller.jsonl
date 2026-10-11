@@ -1,0 +1,1 @@
+{"timestamp_s": 77573.179428759, "session_id": "d1fa58872a3f468c9e00c1c36ac587b6", "event": "fault", "reason": "worker_failure:restore_pan_to_tested_window", "backend": "live"}

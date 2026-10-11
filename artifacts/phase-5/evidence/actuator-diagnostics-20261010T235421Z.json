@@ -1,0 +1,148 @@
+{
+  "follower": {
+    "port": "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128613-if00",
+    "calibration_matches": true,
+    "motors": {
+      "shoulder_pan": {
+        "Present_Position": 2146,
+        "Goal_Position": 2160,
+        "Torque_Enable": 1,
+        "Torque_Limit": 400,
+        "Present_Voltage": 122,
+        "Present_Current": 12,
+        "Present_Load": 65,
+        "Status": 0,
+        "Operating_Mode": 0,
+        "Goal_Time": 0,
+        "Goal_Velocity": 0,
+        "Maximum_Velocity_Limit": 65,
+        "Minimum_Startup_Force": 16,
+        "Phase": 12,
+        "Unloading_Condition": 44
+      },
+      "shoulder_lift": {
+        "Present_Position": 951,
+        "Goal_Position": 914,
+        "Torque_Enable": 1,
+        "Torque_Limit": 400,
+        "Present_Voltage": 123,
+        "Present_Current": 0,
+        "Present_Load": 0,
+        "Status": 0
+      },
+      "elbow_flex": {
+        "Present_Position": 2994,
+        "Goal_Position": 2993,
+        "Torque_Enable": 1,
+        "Torque_Limit": 400,
+        "Present_Voltage": 124,
+        "Present_Current": 0,
+        "Present_Load": 0,
+        "Status": 0
+      },
+      "wrist_flex": {
+        "Present_Position": 2192,
+        "Goal_Position": 2191,
+        "Torque_Enable": 1,
+        "Torque_Limit": 400,
+        "Present_Voltage": 123,
+        "Present_Current": 0,
+        "Present_Load": 0,
+        "Status": 0
+      },
+      "wrist_roll": {
+        "Present_Position": 3155,
+        "Goal_Position": 3156,
+        "Torque_Enable": 1,
+        "Torque_Limit": 400,
+        "Present_Voltage": 122,
+        "Present_Current": 0,
+        "Present_Load": 0,
+        "Status": 0
+      },
+      "gripper": {
+        "Present_Position": 1290,
+        "Goal_Position": 1290,
+        "Torque_Enable": 1,
+        "Torque_Limit": 500,
+        "Present_Voltage": 124,
+        "Present_Current": 0,
+        "Present_Load": 0,
+        "Status": 0
+      }
+    }
+  },
+  "leader": {
+    "port": "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5C4C128105-if00",
+    "calibration_matches": true,
+    "motors": {
+      "shoulder_pan": {
+        "Present_Position": 2064,
+        "Goal_Position": 2301,
+        "Torque_Enable": 0,
+        "Torque_Limit": 400,
+        "Present_Voltage": 126,
+        "Present_Current": 0,
+        "Present_Load": 0,
+        "Status": 0,
+        "Operating_Mode": 0,
+        "Goal_Time": 0,
+        "Goal_Velocity": 0,
+        "Maximum_Velocity_Limit": 65,
+        "Minimum_Startup_Force": 16,
+        "Phase": 12,
+        "Unloading_Condition": 44
+      },
+      "shoulder_lift": {
+        "Present_Position": 915,
+        "Goal_Position": 1110,
+        "Torque_Enable": 0,
+        "Torque_Limit": 400,
+        "Present_Voltage": 125,
+        "Present_Current": 0,
+        "Present_Load": 0,
+        "Status": 0
+      },
+      "elbow_flex": {
+        "Present_Position": 2967,
+        "Goal_Position": 2894,
+        "Torque_Enable": 0,
+        "Torque_Limit": 400,
+        "Present_Voltage": 123,
+        "Present_Current": 0,
+        "Present_Load": 0,
+        "Status": 0
+      },
+      "wrist_flex": {
+        "Present_Position": 2187,
+        "Goal_Position": 2675,
+        "Torque_Enable": 0,
+        "Torque_Limit": 400,
+        "Present_Voltage": 124,
+        "Present_Current": 0,
+        "Present_Load": 0,
+        "Status": 0
+      },
+      "wrist_roll": {
+        "Present_Position": 3157,
+        "Goal_Position": 1989,
+        "Torque_Enable": 0,
+        "Torque_Limit": 400,
+        "Present_Voltage": 124,
+        "Present_Current": 0,
+        "Present_Load": 0,
+        "Status": 0
+      },
+      "gripper": {
+        "Present_Position": 1287,
+        "Goal_Position": 1278,
+        "Torque_Enable": 0,
+        "Torque_Limit": 400,
+        "Present_Voltage": 125,
+        "Present_Current": 0,
+        "Present_Load": -58,
+        "Status": 0
+      }
+    }
+  }
+}

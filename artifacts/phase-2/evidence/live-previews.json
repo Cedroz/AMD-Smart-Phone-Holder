@@ -1,0 +1,14 @@
+{
+  "8000": {
+    "http_status": 200,
+    "jpeg_received": true
+  },
+  "8010": {
+    "http_status": 200,
+    "jpeg_received": true
+  },
+  "8011": {
+    "http_status": 200,
+    "jpeg_received": true
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "external": {
+    "url": "http://169.233.72.8:8000/",
+    "http_status": 200,
+    "jpeg_received": true
+  },
+  "wrist": {
+    "url": "http://169.233.72.8:8001/",
+    "http_status": 200,
+    "jpeg_received": true
+  }
+}

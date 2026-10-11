@@ -1,0 +1,10 @@
+{
+  "follower": {
+    "path": "/home/aup/.cache/huggingface/lerobot/calibration/robots/so_follower/follower_arm.json",
+    "sha256": "7e7fb799691185b02fa9c86ac86f3a978aed2ef52ec7146895402f970c7c138d"
+  },
+  "leader": {
+    "path": "/home/aup/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/leader_arm.json",
+    "sha256": "014dffb44db7daa3a99a6937d09ca8ec8541a11ffc740ce374334acbd148a574"
+  }
+}

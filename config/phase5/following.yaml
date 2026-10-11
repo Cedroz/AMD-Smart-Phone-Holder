@@ -1,0 +1,23 @@
+schema_version: 1
+dry_run: true
+mode: hold
+camera_mount: arm
+camera_rotation: 0
+single_camera: true
+behavior: continuous_centering
+dwell_s: 0.75
+cooldown_s: 2.0
+freshness_s: 0.5
+heartbeat_s: 3.0
+planner_hz: 5.0
+zone_to_pose:
+  station_a: station_a
+  station_b: station_b
+approved_session: null
+perception_acceptance: null
+host: 127.0.0.1
+port: 8020
+allowed_origins:
+  - http://127.0.0.1:8020
+  - http://localhost:8020
+  - http://169.233.72.8:8020

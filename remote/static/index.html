@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1014" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Arm Remote">
+<title>Arm Remote</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --surface-2: #eceef2;
+    --text: #14161a;
+    --muted: #6b7280;
+    --border: #dfe2e8;
+    --ok: #16a34a;
+    --bad: #dc2626;
+    --ambient: #2563eb;
+    --ambient-soft: #dbe6fd;
+    --spot: #b45309;
+    --spot-soft: #fdecd3;
+    --off: #dc2626;
+    --off-soft: #fde2e2;
+    --on-accent: #ffffff;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 12px rgba(16, 24, 40, .06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1014;
+      --surface: #171a20;
+      --surface-2: #20242c;
+      --text: #f2f3f5;
+      --muted: #9aa1ad;
+      --border: #2a2f38;
+      --ok: #22c55e;
+      --bad: #f87171;
+      --ambient: #4f8cff;
+      --ambient-soft: #1a2640;
+      --spot: #f59e0b;
+      --spot-soft: #33260f;
+      --off: #f05252;
+      --off-soft: #3a1a1c;
+      --on-accent: #0e1014;
+      --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1014;
+    --surface: #171a20;
+    --surface-2: #20242c;
+    --text: #f2f3f5;
+    --muted: #9aa1ad;
+    --border: #2a2f38;
+    --ok: #22c55e;
+    --bad: #f87171;
+    --ambient: #4f8cff;
+    --ambient-soft: #1a2640;
+    --spot: #f59e0b;
+    --spot-soft: #33260f;
+    --off: #f05252;
+    --off-soft: #3a1a1c;
+    --on-accent: #0e1014;
+    --shadow: none;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .app {
+    max-width: 480px;
+    min-height: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  header { display: flex; align-items: center; justify-content: space-between; }
+  .brand { font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
+  .brand small { display: block; font-weight: 500; font-size: 13px; color: var(--muted); }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 13px; font-weight: 600; color: var(--muted);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .pill.ok .dot { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+  .pill.bad .dot { background: var(--bad); }
+
+  .status {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 20px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 16px;
+  }
+  .status .badge {
+    width: 56px; height: 56px; border-radius: 16px; flex: none;
+    display: grid; place-items: center;
+    background: var(--surface-2); color: var(--muted);
+    transition: background .2s, color .2s;
+  }
+  .status .badge svg { width: 28px; height: 28px; }
+  .status .label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .status .mode { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .status[data-mode="ambient"] .badge { background: var(--ambient-soft); color: var(--ambient); }
+  .status[data-mode="spotlight"] .badge { background: var(--spot-soft); color: var(--spot); }
+  .status[data-mode="deactivate"] .badge { background: var(--off-soft); color: var(--off); }
+
+  .spacer { flex: 1; }
+
+  .section-title { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 4px -8px; text-transform: uppercase; letter-spacing: .06em; }
+
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  button {
+    font: inherit; color: inherit; border: 0; cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+  }
+  .btn {
+    position: relative;
+    display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+    gap: 16px; padding: 18px; min-height: 148px;
+    border-radius: 20px; text-align: left;
+    background: var(--surface); border: 1.5px solid var(--border); box-shadow: var(--shadow);
+    transition: transform .08s ease, background .2s, border-color .2s, color .2s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn:focus-visible { outline: 3px solid var(--ambient); outline-offset: 2px; }
+  .btn .icon {
+    width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn .icon svg { width: 26px; height: 26px; }
+  .btn .name { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+  .btn .hint { font-size: 13px; color: var(--muted); margin-top: 2px; transition: color .2s; }
+  .btn .check {
+    position: absolute; top: 16px; right: 16px; width: 24px; height: 24px; border-radius: 50%;
+    display: grid; place-items: center; opacity: 0; transform: scale(.6);
+    transition: opacity .2s, transform .2s;
+    background: var(--on-accent);
+  }
+  .btn .check svg { width: 14px; height: 14px; }
+
+  .btn[data-mode="ambient"] .icon { background: var(--ambient-soft); color: var(--ambient); }
+  .btn[data-mode="spotlight"] .icon { background: var(--spot-soft); color: var(--spot); }
+
+  .btn[data-mode="ambient"].active { background: var(--ambient); border-color: var(--ambient); color: var(--on-accent); }
+  .btn[data-mode="spotlight"].active { background: var(--spot); border-color: var(--spot); color: var(--on-accent); }
+  .btn.active .icon { background: color-mix(in srgb, var(--on-accent) 22%, transparent); color: var(--on-accent); }
+  .btn.active .hint { color: color-mix(in srgb, var(--on-accent) 80%, transparent); }
+  .btn.active .check { opacity: 1; transform: scale(1); }
+  .btn[data-mode="ambient"] .check { color: var(--ambient); }
+  .btn[data-mode="spotlight"] .check { color: var(--spot); }
+
+  .btn-off {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; min-height: 64px; border-radius: 18px;
+    font-size: 18px; font-weight: 700;
+    background: var(--off-soft); color: var(--off); border: 1.5px solid transparent;
+    transition: transform .08s ease, background .2s, color .2s;
+  }
+  .btn-off svg { width: 22px; height: 22px; }
+  .btn-off:active { transform: scale(.98); }
+  .btn-off.active { background: var(--surface); color: var(--muted); border-color: var(--border); }
+  .btn-off:focus-visible { outline: 3px solid var(--off); outline-offset: 2px; }
+
+  .busy { pointer-events: none; }
+  .btn.pending::after, .btn-off.pending::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: color-mix(in srgb, var(--bg) 35%, transparent);
+  }
+  .btn-off { position: relative; }
+  .spinner {
+    display: none; width: 22px; height: 22px; border-radius: 50%;
+    border: 2.5px solid currentColor; border-right-color: transparent;
+    animation: spin .7s linear infinite; position: absolute; z-index: 1;
+  }
+  .btn .spinner { top: 18px; right: 18px; }
+  .btn-off .spinner { right: 20px; }
+  .pending .spinner { display: block; }
+  .pending .check { opacity: 0 !important; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .host { text-align: center; font-size: 12px; color: var(--muted); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+    max-width: calc(100% - 32px);
+    background: var(--text); color: var(--bg);
+    padding: 12px 16px; border-radius: 14px; font-size: 14px; font-weight: 500;
+    transition: opacity .2s, transform .2s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::after { transition: none !important; animation-duration: 1.5s !important; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <div class="brand">FollowMe<small>Arm remote</small></div>
+    <div class="pill" id="conn" role="status" aria-live="polite"><span class="dot"></span><span id="connText">Connecting…</span></div>
+  </header>
+
+  <section class="status" id="status" data-mode="" aria-live="polite">
+    <div class="badge" id="statusIcon"></div>
+    <div>
+      <div class="label">Current mode</div>
+      <div class="mode" id="statusMode">—</div>
+    </div>
+  </section>
+
+  <div class="spacer"></div>
+
+  <div class="section-title">Mode</div>
+  <section class="modes">
+    <button class="btn" data-mode="ambient" aria-pressed="false">
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <span class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2"/></svg>
+      </span>
+      <span><span class="name">Ambient</span><span class="hint" style="display:block">Whole-room view</span></span>
+    </button>
+    <button class="btn" data-mode="spotlight" aria-pressed="false">
+      <span class="spinner" aria-hidden="true"></span>
+      <span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+      <span class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="3"/><path d="M5.5 21c.8-3.6 3.4-6 6.5-6s5.7 2.4 6.5 6"/><path d="M12 1.5v1M4.5 4.5l.8.8M19.5 4.5l-.8.8"/></svg>
+      </span>
+      <span><span class="name">Spotlight</span><span class="hint" style="display:block">Face the speaker</span></span>
+    </button>
+  </section>
+
+  <button class="btn-off" data-mode="deactivate" aria-pressed="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+    <span id="offLabel">Deactivate</span>
+    <span class="spinner" aria-hidden="true"></span>
+  </button>
+
+  <div class="host" id="host"></div>
+</main>
+
+<div class="toast" id="toast" role="alert"></div>
+
+<script>
+  const MODES = {
+    ambient: { name: "Ambient" },
+    spotlight: { name: "Spotlight" },
+    deactivate: { name: "Deactivated" },
+  };
+  const ICONS = {
+    ambient: document.querySelector('.btn[data-mode="ambient"] .icon').innerHTML,
+    spotlight: document.querySelector('.btn[data-mode="spotlight"] .icon').innerHTML,
+    deactivate: document.querySelector('.btn-off svg').outerHTML,
+  };
+
+  const buttons = [...document.querySelectorAll("[data-mode]")].filter(el => el.tagName === "BUTTON");
+  const conn = document.getElementById("conn");
+  const connText = document.getElementById("connText");
+  const statusBox = document.getElementById("status");
+  const toast = document.getElementById("toast");
+  document.getElementById("host").textContent = location.host;
+
+  let currentMode = null;
+  let busy = false;
+  let toastTimer;
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+  }
+
+  function setConnected(ok) {
+    conn.classList.toggle("ok", ok);
+    conn.classList.toggle("bad", !ok);
+    connText.textContent = ok ? "Connected" : "Offline";
+  }
+
+  function render(mode) {
+    currentMode = mode;
+    statusBox.dataset.mode = mode || "";
+    document.getElementById("statusMode").textContent = mode ? MODES[mode].name : "—";
+    document.getElementById("statusIcon").innerHTML = mode ? ICONS[mode] : "";
+    document.getElementById("offLabel").textContent = mode === "deactivate" ? "Deactivated" : "Deactivate";
+    for (const b of buttons) {
+      const on = b.dataset.mode === mode;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", String(on));
+    }
+  }
+
+  async function request(path, options = {}) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    try {
+      const res = await fetch(path, { ...options, signal: controller.signal, cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function poll() {
+    try {
+      const data = await request("/api/status");
+      setConnected(true);
+      if (!busy && data.mode !== currentMode) render(data.mode);
+    } catch {
+      setConnected(false);
+    }
+  }
+
+  async function sendMode(mode, button) {
+    if (busy || mode === currentMode) return;
+    busy = true;
+    navigator.vibrate?.(12);
+    document.body.classList.add("busy");
+    button.classList.add("pending");
+    try {
+      const data = await request("/api/mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode }),
+      });
+      setConnected(true);
+      render(data.mode);
+    } catch (err) {
+      setConnected(false);
+      showToast(err.name === "AbortError" ? "No response from the arm controller" : `Couldn't switch: ${err.message}`);
+    } finally {
+      busy = false;
+      button.classList.remove("pending");
+      document.body.classList.remove("busy");
+    }
+  }
+
+  for (const b of buttons) b.addEventListener("click", () => sendMode(b.dataset.mode, b));
+
+  poll();
+  setInterval(poll, 2000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+</script>
+</body>
+</html>

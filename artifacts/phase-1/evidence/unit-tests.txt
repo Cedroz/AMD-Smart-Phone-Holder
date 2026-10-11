@@ -1,0 +1,22 @@
+test_handshake_failure_still_closes_without_disabling_torque (test_phase0_inspection.InspectionTests.test_handshake_failure_still_closes_without_disabling_torque) ... ok
+test_success_preserves_torque_and_blocks_writes (test_phase0_inspection.InspectionTests.test_success_preserves_torque_and_blocks_writes) ... ok
+test_changed_calibration_identity_rejected (test_phase1.EnvironmentTests.test_changed_calibration_identity_rejected) ... ok
+test_corrupt_model_rejected (test_phase1.EnvironmentTests.test_corrupt_model_rejected) ... ok
+test_default_preflight_does_not_open_hardware (test_phase1.EnvironmentTests.test_default_preflight_does_not_open_hardware) ... ok
+test_missing_interpreter_and_model (test_phase1.EnvironmentTests.test_missing_interpreter_and_model) ... ok
+test_motion_enabled_config_rejected (test_phase1.EnvironmentTests.test_motion_enabled_config_rejected) ... ok
+test_fragmented_messages_and_buffered_next_message (test_phase1.ProtocolTests.test_fragmented_messages_and_buffered_next_message) ... ok
+test_invalid_json_and_non_object (test_phase1.ProtocolTests.test_invalid_json_and_non_object) ... ok
+test_oversized_receive_without_delimiter (test_phase1.ProtocolTests.test_oversized_receive_without_delimiter) ... ok
+test_oversized_send (test_phase1.ProtocolTests.test_oversized_send) ... ok
+test_timeout_and_worker_exit (test_phase1.ProtocolTests.test_timeout_and_worker_exit) ... ok
+test_handshake_mismatch_rejected (test_phase1.SupervisionTests.test_handshake_mismatch_rejected) ... ok
+test_inference_timeout_and_identity_mismatch (test_phase1.SupervisionTests.test_inference_timeout_and_identity_mismatch) ... ok
+test_latest_buffers_replace_old_frames_and_busy_request_rejected (test_phase1.SupervisionTests.test_latest_buffers_replace_old_frames_and_busy_request_rejected) ... ok
+test_start_timeout_reaps_child (test_phase1.SupervisionTests.test_start_timeout_reaps_child) ... ok
+test_worker_exit_reaps_child (test_phase1.SupervisionTests.test_worker_exit_reaps_child) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.750s
+
+OK
