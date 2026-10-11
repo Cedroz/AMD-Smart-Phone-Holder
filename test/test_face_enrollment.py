@@ -141,12 +141,36 @@ class EnrollmentTests(unittest.TestCase):
         self.assertEqual(text.call_args_list[1].args[1], 'face 40px')
         self.assertEqual(rectangle.call_args_list[0].args[3], (0, 255, 0))
 
+    def test_merged_motion_commands_are_accepted_by_api(self):
+        control = track.TrackerControl(args('--dry-run'))
+        with TestClient(track.create_api(control)) as client:
+            for command in ('test_motion', 'deactivate', 'activate', 'up', 'down', 'left', 'right',
+                            'rotate', 'party', 'home', 'landscape', 'portrait'):
+                with self.subTest(command=command):
+                    self.assertEqual(client.post('/commands', json={'command': command}).status_code, 202)
+                    self.assertEqual(control.commands.get_nowait(), command)
+
+    def test_party_stops_without_return_motion_when_deactivated(self):
+        import threading
+        control = track.TrackerControl(args('--dry-run'))
+        robot = Mock()
+        def move(action):
+            control.submit('deactivate')
+        robot.send_action.side_effect = move
+        with patch.object(track, 'read_joints', return_value={j: 0.0 for j in track.ARM_JOINTS}), \
+             patch.object(track.time, 'sleep'):
+            track.party(robot, control.args, threading.Event(), control.commands,
+                        should_stop=control.deactivate_requested.is_set)
+        robot.send_action.assert_called_once()
+        self.assertEqual(control.commands.get_nowait(), 'deactivate')
+
     def test_tracking_uses_single_camera_and_blocks_motion_while_enrolling(self):
         options = args('--port', 'fake')
         control = track.TrackerControl(options)
         control.enrollment = self.enrollment
         self.enrollment.start('Alice')
-        control.submit('test_motion')
+        for command in ('test_motion', 'rotate', 'party', 'home', 'landscape', 'portrait'):
+            control.submit(command)
         camera, robot, detector = Mock(), Mock(), Mock()
         detector.detect.return_value = [(400, 300, 50, 50, 'face')]
         callbacks = []

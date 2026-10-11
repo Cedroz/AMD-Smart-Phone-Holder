@@ -1,7 +1,7 @@
 """MediaPipe hand-gesture wrapper; runs in the vision environment and never imports robot modules."""
 from followme.environment import verified_model
 from followme.gestures.interpreter import HandObservation
-from followme.gestures.motion import hand_shape
+from followme.gestures.motion import hand_pose, hand_shape
 
 WRIST, MIDDLE_KNUCKLE = 0, 9
 
@@ -29,9 +29,12 @@ class MediaPipeGestureRecognizer:
             gestures = result.gestures[index] if index < len(result.gestures) else []
             label, score = (gestures[0].category_name, float(gestures[0].score)) if gestures else ("None", 0.0)
             wrist, knuckle = landmarks[WRIST], landmarks[MIDDLE_KNUCKLE]
-            openness, fingers = hand_shape([(point.x, point.y) for point in landmarks], aspect)
+            points = [(point.x, point.y) for point in landmarks]
+            openness, fingers = hand_shape(points, aspect)
+            spread, angle = hand_pose(points, aspect)
             hands.append(HandObservation(label, score,
-                                         (wrist.x + knuckle.x) / 2, (wrist.y + knuckle.y) / 2, openness, fingers))
+                                         (wrist.x + knuckle.x) / 2, (wrist.y + knuckle.y) / 2, openness, fingers,
+                                         spread, angle))
         return hands
 
     def close(self):

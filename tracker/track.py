@@ -4,9 +4,12 @@
 The camera must be mounted on the arm so it turns with the phone. Each frame we
 find the person, measure how far they are from the image center, and nudge
 shoulder_pan (left/right) and optionally wrist_flex (up/down) to re-center them.
-The preview also serves POST /commands and GET /status. Optional --gestures
-uses the separate vision environment for closer/farther/freeze/resume commands.
+The preview also serves POST /commands and GET /status (Rotate 90 and Party mode
+buttons included). Optional --gestures
+uses the separate vision environment for closer/farther/freeze/resume commands, and turning a
+flat edge-on hand 90 degrees rotates the phone to match (landscape/portrait).
 Optional --distance maintains an approximate calibrated camera-to-user distance.
+Cover the camera with your hand for 2 s to release the phone (Grip phone puts it back).
 
 Run on the arm, inside the `lerobot` conda env:
 
@@ -19,6 +22,7 @@ Live preview: open http://<arm-ip>:8000 in a browser on your laptop.
 """
 
 import argparse
+import atexit
 import glob
 import logging
 import os
@@ -46,6 +50,7 @@ FACE_MODEL = os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx")
 PAN = "shoulder_pan"
 TILT = "wrist_flex"
 GRIP = "gripper"
+ROLL = "wrist_roll"
 # Joints that feel it when someone grabs and tugs the phone.
 PULL_JOINTS = ["wrist_flex", "wrist_roll", "gripper"]
 ARM_JOINTS = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"]
@@ -102,6 +107,9 @@ class Camera:
         self.running = True
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.thread.start()
+        # However the program ends (even a crash during startup), stop the reader thread first: if
+        # Python exits while it's inside OpenCV, it aborts with "FATAL: exception not rethrown".
+        atexit.register(self.close)
 
     def _loop(self):
         while self.running:
@@ -127,8 +135,10 @@ class Camera:
         # Let the reader thread finish its current read before releasing the device; releasing it
         # mid-read crashes OpenCV ("terminate called without an active exception") and can leave the
         # camera stuck so the next run can't open it.
+        if not self.running:
+            return
         self.running = False
-        self.thread.join(timeout=2.0)
+        self.thread.join(timeout=3.0)
         self.cap.release()
 
 
@@ -285,7 +295,10 @@ progress{width:90%;margin:.7em auto;display:block}button:disabled{opacity:.5;cur
 <button onclick="send('closer')">Closer</button><button onclick="send('farther')">Farther</button>
 <button onclick="send('freeze')">Freeze</button><button onclick="send('resume')">Resume</button>
 <button id="rel" onclick="send('release')">Release phone</button>
-<button id="grip" onclick="send('grip')">Grip phone</button><div id="msg" role="status"></div>
+<button id="grip" onclick="send('grip')">Grip phone</button><button onclick="send('rotate')" style="background:#2f81f7;color:#fff">Rotate phone 90&deg;</button>
+<button onclick="send('party')" style="background:#d63ac9;color:#fff">Party mode &#127881;</button>
+<button onclick="send('home')" style="background:#8b949e;color:#fff">Reset pose</button>
+<div id="msg" role="status"></div>
 <section id="face-enrollment" aria-label="Face enrollment">
 <h2>Enroll a face</h2><p>Keep only this person in view and slowly vary their head angle.
 Tracking pauses while 20 samples are collected. Enrolling an existing name replaces its samples.</p>
@@ -329,7 +342,7 @@ def create_api(control, preview=None):
 
     @app.post("/commands", status_code=202)
     def command(command: Literal["closer", "farther", "freeze", "resume", "release", "grip", "test_motion",
-                                 "deactivate", "activate", "up", "down", "left", "right"] = Body(embed=True)):
+                                 "deactivate", "activate", "up", "down", "left", "right", "rotate", "party", "home", "landscape", "portrait"] = Body(embed=True)):
         try:
             control.submit(command)
         except queue.Full:
@@ -426,6 +439,12 @@ class Preview:
         self.thread.join(timeout=2)
 
 
+def picture_detail(frame):
+    """How much detail the picture has (grey-level spread). A hand over the lens gives a few; a room 40+."""
+    small = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), (80, 60))
+    return float(small.std())
+
+
 def annotate(frame, boxes, target, aim, deadband, status, face_labels=None):
     h, w = frame.shape[:2]
     db = int(deadband * w / 2)
@@ -467,8 +486,35 @@ def find_follower_port():
     raise RuntimeError("No port matched the follower calibration. Pass --port explicitly (see lerobot-find-port).")
 
 
+def other_users_of(device):
+    """PIDs + command lines of other processes that have `device` open (Linux /proc scan)."""
+    if not isinstance(device, (str, bytes, os.PathLike)):
+        return []  # not a real port (e.g. a test double)
+    target = os.path.realpath(device)
+    found = []
+    for pid in filter(str.isdigit, os.listdir("/proc") if os.path.isdir("/proc") else []):
+        if int(pid) == os.getpid():
+            continue
+        try:
+            fds = os.listdir(f"/proc/{pid}/fd")
+            if any(os.path.realpath(f"/proc/{pid}/fd/{fd}") == target for fd in fds):
+                with open(f"/proc/{pid}/cmdline", "rb") as f:
+                    found.append(f"{pid}: {f.read().replace(b'\0', b' ').decode(errors='replace').strip()}")
+        except OSError:
+            continue
+    return found
+
+
 def connect_arm(port):
     from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
+
+    # Two programs driving the arm at once fight over it (garbled packets, joints yanked both ways).
+    others = other_users_of(port)
+    if others:
+        raise RuntimeError(
+            "Another program is already using the arm, so we'd be fighting it:\n  " + "\n  ".join(others)
+            + "\nStop it first (kill <PID>), after checking with whoever started it."
+        )
 
     config = SO101FollowerConfig(
         port=port,
@@ -498,13 +544,41 @@ def connect_arm(port):
 
 def disconnect_arm(robot, args):
     """Disconnect, leaving the arm holding its pose but the gripper motor off so it can be opened by hand."""
+    port = robot.config.port
     if not args.keep_grip:
-        try:
-            robot.bus.disable_torque(GRIP, num_retry=3)
-            log.info("Gripper motor off: you can open it by hand (use --keep-grip to keep it clamped)")
-        except BUS_ERRORS as e:
-            log.warning(f"Couldn't switch the gripper off ({e})")
-    robot.disconnect()
+        # Read it back and retry: a garbled bus packet can drop the command and leave the clamp locked.
+        for attempt in range(5):
+            try:
+                robot.bus.disable_torque(GRIP, num_retry=3)
+                if robot.bus.read("Torque_Enable", GRIP, num_retry=3) == 0:
+                    log.info("Gripper motor off: you can open it by hand (use --keep-grip to keep it clamped)")
+                    break
+            except BUS_ERRORS as e:
+                log.debug(f"Gripper off attempt {attempt + 1} failed: {e}")
+            time.sleep(0.1)
+        else:
+            log.warning("Couldn't confirm the gripper motor is off; trying again on a fresh connection")
+    try:
+        robot.disconnect()
+    except BUS_ERRORS as e:
+        log.warning(f"Disconnect hit a bus error ({e})")
+    if not args.keep_grip:
+        free_gripper_fresh(port)
+
+
+def free_gripper_fresh(port):
+    """The manual fix that always worked, as the very last step: a brand-new connection that only
+    turns the gripper motor off, then disconnects without touching the other motors."""
+    try:
+        from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
+
+        r = SO101Follower(SO101FollowerConfig(port=port, id=FOLLOWER_ID))
+        r.bus.connect(handshake=False)  # skip the all-motors check: only the gripper matters here
+        r.bus.disable_torque(GRIP, num_retry=3)
+        r.bus.disconnect(disable_torque=False)
+        log.info("Gripper is free")
+    except Exception as e:  # never let this hide the real reason the program stopped
+        log.warning(f"Couldn't free the gripper on a fresh connection ({e})")
 
 
 def read_joints(robot):
@@ -596,6 +670,73 @@ def plane_action(q, tilt_offset=0.0):
         "elbow_flex.pos": float(q[2]),
         f"{TILT}.pos": float(q[3] + tilt_offset),
     }
+
+
+def gripper_pitch(kin):
+    """Degrees the gripper points above (+) or below (-) horizontal, for the pose last passed to FK."""
+    d = kin.robot.get_T_world_frame(kin.target_frame_name)[:3, 3] - kin.robot.get_T_world_frame("wrist_link")[:3, 3]
+    return float(np.degrees(np.arctan2(d[2], np.hypot(d[0], d[1])))), d / np.linalg.norm(d)
+
+
+def lowest_point(kin):
+    """Height (m) of the lowest of the elbow, wrist and gripper tip, for the pose last passed to FK."""
+    return min(kin.robot.get_T_world_frame(f)[2, 3] for f in ("lower_arm_link", "wrist_link", kin.target_frame_name))
+
+
+def rotation_about(axis, angle):
+    k = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
+    return np.eye(3) + np.sin(angle) * k + (1 - np.cos(angle)) * k @ k
+
+
+def plan_home(urdf, joints, args):
+    """Joint waypoints from the current pose to the default "ready" pose, or (None, reason).
+
+    Ready pose: base centred, gripper tip --home-reach forward and --home-height up, gripper pointing
+    level (--home-pitch). It is solved once with IK from a neutral seed, then reached by moving every
+    joint together in a straight line, in <=1 deg steps, checked so no part of the arm ever goes lower
+    than it already is (it never sweeps down into the table). wrist_roll and the gripper are untouched.
+    """
+    from lerobot.model.kinematics import RobotKinematics
+
+    kin = RobotKinematics(urdf, "gripper_frame_link", ARM_JOINTS)
+    roll = joints[ROLL]
+    seed = np.array([0.0, -30.0, 30.0, 0.0, roll])  # upper arm up, forearm forward
+    target = kin.forward_kinematics(seed).copy()
+    pitch, d = gripper_pitch(kin)
+    level = rotation_about(np.cross(d, [0, 0, 1]) / np.linalg.norm(np.cross(d, [0, 0, 1])),
+                           np.radians(args.home_pitch - pitch))
+    target[:3, :3] = level @ target[:3, :3]
+    target[0, 3], target[2, 3] = args.home_reach, args.home_height
+    q = seed.copy()
+    for _ in range(150):
+        q = kin.inverse_kinematics(q, target, position_weight=1.0, orientation_weight=1.0)
+        q[0], q[4] = 0.0, roll
+    reached = kin.forward_kinematics(q)
+    pos_err = float(np.linalg.norm(reached[:3, 3] - target[:3, 3]))
+    pitch_err = gripper_pitch(kin)[0] - args.home_pitch
+    if not np.isfinite(q).all() or pos_err > 0.01 or abs(pitch_err) > 3:
+        return None, f"can't reach the ready pose ({pos_err * 1000:.0f} mm / {pitch_err:+.0f} deg off)"
+
+    q0 = np.array([joints[j] for j in ARM_JOINTS], dtype=float)
+    q_goal = q.copy()
+    q_goal[4] = q0[4]
+    kin.forward_kinematics(q0)
+    floor = min(lowest_point(kin), 0.03) - 0.005  # never lower than it already is (or 3 cm)
+    n = max(1, int(np.ceil(np.abs(q_goal - q0)[:4].max() / 1.0)))
+    path = [q0 + (q_goal - q0) * i / n for i in range(1, n + 1)]
+    for i, qi in enumerate(path):
+        kin.forward_kinematics(qi)
+        if lowest_point(kin) < floor:
+            return None, (f"the way there would dip to {lowest_point(kin) * 100:.0f} cm "
+                          f"({100 * i // n}% of the way); lift the arm a little by hand first")
+    return path, None
+
+
+def drive_joints(robot, path, step_s=0.05):
+    """Send pan/lift/elbow/wrist waypoints (from plan_home) one by one."""
+    for q in path:
+        robot.send_action({f"{j}.pos": float(v) for j, v in zip(ARM_JOINTS[:4], q[:4])})
+        time.sleep(step_s)
 
 
 def move_gripper(robot, start, end, seconds=1.0, steps=20):
@@ -991,8 +1132,8 @@ class TrackerControl:
     grip stay available so the phone can still be taken out.
     """
     COMMANDS = ("closer", "farther", "freeze", "resume", "release", "grip", "test_motion", "deactivate", "activate",
-                "up", "down", "left", "right")
-    DPAD = ("up", "down", "left", "right")
+                "up", "down", "left", "right", "rotate", "party", "home", "landscape", "portrait")
+    DPAD = ("up", "down", "left", "right", "rotate", "party", "home", "landscape", "portrait")
 
     def __init__(self, args):
         self.args = args
@@ -1120,6 +1261,59 @@ def start_voice(args):
     return recognizer, listener
 
 
+# (joint, swing deg each side, seconds per swing at speed 1). Each joint is flung to one end, then the
+# other: smooth sine waves are faster than the servos can follow, so they only wiggle a little.
+# Driving straight at each end runs them at their real top speed and reaches the full swing.
+PARTY_MOVES = [
+    ("shoulder_pan", 30.0, 0.35),
+    ("wrist_flex", 20.0, 0.25),
+    ("wrist_roll", 45.0, 0.40),
+    ("elbow_flex", 8.0, 0.50),
+    ("shoulder_lift", 5.0, 0.60),
+]
+
+
+def party(robot, args, stop, commands, should_stop=lambda: False):
+    """Dance until Party is pressed again (or Ctrl+C), then ease back to where it started.
+
+    Runs its own ~40 Hz loop (tracking is limited by the camera). Swings grow over the first second,
+    wrist_roll stays in range, and the gripper is never touched. Other commands that arrive while
+    dancing are put back in the queue for the tracking loop.
+    """
+    start = read_joints(robot)
+    log.info(f"PARTY MODE (speed x{args.party_speed:g}) - press Party again to stop")
+    deferred, last, t0 = [], {}, time.time()
+    while not stop.is_set() and not should_stop():
+        try:
+            cmd = commands.get_nowait()
+            if cmd == "party":
+                break
+            deferred.append(cmd)
+        except queue.Empty:
+            pass
+        t = time.time() - t0
+        ramp = min(1.0, t / 1.0)
+        action = {}
+        for joint, amp, swing_s in PARTY_MOVES:
+            side = 1.0 if int(t * args.party_speed / swing_s) % 2 == 0 else -1.0
+            angle = start[joint] + ramp * amp * side
+            if joint == ROLL:
+                angle = np.clip(angle, -170.0, 170.0)
+            action[f"{joint}.pos"] = float(angle)
+        robot.send_action(action)
+        last = action
+        time.sleep(max(0.0, 1 / 40 - (time.time() - t0 - t)))
+    # Ease back to the starting pose over 1 s so tracking picks up where it left off.
+    for i in range(1, 21):
+        if should_stop():
+            break
+        robot.send_action({k: float(v + (start[k.removesuffix(".pos")] - v) * i / 20) for k, v in last.items()})
+        time.sleep(0.05)
+    for cmd in deferred:
+        commands.put_nowait(cmd)
+    log.info("Party over, back to tracking")
+
+
 def start_gestures(args):
     # The parent imports only the IPC client; MediaPipe stays in .venv-vision.
     sys.path.insert(0, str(ROOT / "src"))
@@ -1213,6 +1407,9 @@ def run(args):
         grip_home = None
         pull = None
         near_seen = 0.0  # last time a person was close enough to be the one grabbing the phone
+        person_seen = 0.0  # last time anyone was detected
+        cover_start = None  # when the picture went blank; False = went blank with nobody around (ignored)
+        last_share_check = 0.0
         pull_warned = False
         if robot:
             grip_home = read_joints(robot)[GRIP]
@@ -1229,6 +1426,10 @@ def run(args):
 
         # Nearly shut, but short of the end stop (drive_gripper keeps targets GRIP_END_MARGIN from the ends).
         gripper_closed = 0.0 if args.gripper_open_sign > 0 else 100.0
+        roll_home = read_joints(robot)[ROLL] if robot else 0.0
+        # wrist_roll spans about -180..180 deg: turn whichever way stays inside that range.
+        rotate_by = args.rotate_deg if abs(roll_home + args.rotate_deg) <= 170 else -args.rotate_deg
+        rotated = False  # phone turned 90 deg from where it started
 
         def release(reason):
             nonlocal held, pull_warned
@@ -1301,13 +1502,56 @@ def run(args):
             return "applied"
 
         def process_commands():
-            nonlocal hik, z_goal
+            nonlocal hik, z_goal, rotated, smoothed, pan_goal, pan_home, tilt_goal, tilt_home, tilt_offset
             for _ in range(32):
                 try:
                     cmd = commands.get_nowait()
                 except queue.Empty:
                     break
-                if cmd in ("release", "grip"):
+                if cmd in ("rotate", "party", "home", "landscape", "portrait") and control.deactivated:
+                    result = "ignored: deactivated"
+                elif cmd in ("rotate", "party", "home", "landscape", "portrait") and control.enrollment.busy:
+                    result = "ignored: face enrollment in progress"
+                elif cmd in ("rotate", "party", "home", "landscape", "portrait") and not robot:
+                    result = "ignored: dry run"
+                elif (cmd == "landscape" and rotated) or (cmd == "portrait" and not rotated):
+                    result = "already applied"
+                elif cmd in ("rotate", "landscape", "portrait"):  # the hand-twist gesture sends landscape/portrait
+                    start = roll_home + (rotate_by if rotated else 0.0)
+                    end = roll_home + (0.0 if rotated else rotate_by)
+                    log.info(f"Rotating the phone {'back' if rotated else 'by'} {end - start:+.0f} deg")
+                    for i in range(1, 31):  # slowly, over about 1.5 s
+                        robot.send_action({f"{ROLL}.pos": float(start + (end - start) * i / 30)})
+                        time.sleep(0.05)
+                    rotated = not rotated
+                    smoothed = None  # the view just turned; re-find the person
+                    result = "applied"
+                elif cmd == "home":
+                    path, problem = plan_home(args.urdf, read_joints(robot), args)
+                    if problem:
+                        result = f"refused: {problem}"
+                    else:
+                        log.info(f"Moving to the ready pose ({len(path) * 0.05:.0f} s)")
+                        drive_joints(robot, path)
+                        # Track from here, as if the program had just started in this pose.
+                        joints = read_joints(robot)
+                        joints.update({j: float(v) for j, v in zip(ARM_JOINTS[:4], path[-1][:4])})
+                        pan_goal = pan_home = joints[PAN]
+                        tilt_goal = tilt_home = joints[TILT]
+                        tilt_offset = 0.0
+                        if hik:
+                            hik = HeightIK(args.urdf, joints)
+                            z_goal = hik.z0
+                            control.reach0 = control.reach = control.requested_reach = hik.reach0
+                        smoothed = None
+                        result = "applied"
+                elif cmd == "party":
+                    control.publish(mode="party")
+                    party(robot, args, stop, commands, should_stop=lambda: (
+                        control.deactivate_requested.is_set() or control.enrollment.busy))
+                    smoothed = None  # re-find the person after dancing
+                    result = "applied"
+                elif cmd in ("release", "grip"):
                     if not robot:
                         result = "ignored: dry run"
                     elif not args.gripper_open_sign:
@@ -1390,6 +1634,15 @@ def run(args):
         voice_was_on, voice_seen, search_dir = False, 0.0, 1.0
         last_control = time.monotonic()
         while not stop.is_set() and (t_end is None or time.time() < t_end):
+            # Someone may start another program on the arm while we run; fighting it garbles the bus
+            # and crashes both, so stop cleanly as soon as it shows up.
+            if robot and time.time() - last_share_check > 2.0:
+                last_share_check = time.time()
+                others = other_users_of(robot.config.port)
+                if others:
+                    log.error("Another program just started using the arm, stopping so we don't fight it:\n  "
+                              + "\n  ".join(others))
+                    break
             process_commands()
             seq, frame = cam.read(seq)
             now_control = time.monotonic()
@@ -1403,6 +1656,10 @@ def run(args):
                 control.publish(mode="deactivated" if control.deactivated else ("frozen" if control.frozen else "hold"), target_visible=False, motion_blocker="camera unavailable")
                 log.warning("No new frame from the camera for 1 s")
                 continue
+            if rotated and args.camera_on_roll != "no":
+                # The camera turned with the phone: turn the picture back so people are upright again.
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE if args.camera_on_roll == "cw"
+                                   else cv2.ROTATE_90_COUNTERCLOCKWISE)
             h, w = frame.shape[:2]
 
             # Voice: while the target's voice was heard recently, follow only their face; if it isn't in
@@ -1471,6 +1728,24 @@ def run(args):
                 tw, th = target[2], target[3]
                 if (target[4] == "face" and tw > 0.15 * w) or (target[4] != "face" and th > 0.6 * h):
                     near_seen = now
+            if boxes:
+                person_seen = now
+
+            # A hand over the lens makes the picture almost uniform. It only counts if someone was in
+            # view just before (a hand reaching for the phone), so a blank wall never releases it.
+            detail = picture_detail(frame)
+            if held and detail < args.cover_detail:
+                if cover_start is None:
+                    cover_start = now if now - person_seen < 2.0 else False
+                if cover_start and now - cover_start >= args.cover_seconds:
+                    if robot and args.gripper_open_sign:
+                        release("camera covered")
+                        control.requested_reach = control.reach
+                    else:
+                        log.info("Camera covered: would release the phone now (dry run)")
+                    cover_start = None
+            else:
+                cover_start = None
 
             freeze = False
             if robot and args.gripper_open_sign and held and pull:
@@ -1563,7 +1838,19 @@ def run(args):
                     )
                     action[f"{TILT}.pos"] = tilt_goal
                 if action:
-                    robot.send_action(action)
+                    sent = robot.send_action(action)
+                    if not isinstance(sent, dict):  # LeRobot returns what it sent; anything else: assume as asked
+                        sent = action
+                    # Anti-windup: LeRobot caps each move at 10 deg from where the joint really is, and a joint at
+                    # its physical end can't move at all. Continue from what was actually sent, so our target never
+                    # runs ahead of the arm (otherwise it must "unwind" before the arm turns back the other way).
+                    if f"{PAN}.pos" in sent:
+                        pan_goal = float(sent[f"{PAN}.pos"])
+                    if f"{TILT}.pos" in sent:
+                        if hik:
+                            tilt_offset = float(np.clip(sent[f"{TILT}.pos"] - hik.q[3], -args.tilt_limit, args.tilt_limit))
+                        else:
+                            tilt_goal = float(sent[f"{TILT}.pos"])
 
             control.publish(mode="deactivated" if control.deactivated else
                             "frozen" if control.frozen else ("tracking" if held else "released"),
@@ -1585,6 +1872,8 @@ def run(args):
                     pose += f" load_change={pull.deviation:.0f}"
                 if robot and not held:
                     pose += " RELEASED (press g+ENTER or the Grip button)"
+                if rotated:
+                    pose += " ROTATED"
                 log.info(f"camera {cam_fps:4.1f} fps, processed {fps:4.1f} fps | {len(boxes)} detections | err x={ex:+.2f} y={ey:+.2f}{pose}")
 
             if preview:
@@ -1601,6 +1890,10 @@ def run(args):
                     enrollment = control.enrollment.snapshot()
                     status = f'ENROLLING {enrollment["name"]}: {enrollment["samples"]}/{enrollment["total"]}'
                 preview.show(annotate(frame, boxes, target, smoothed, args.deadband, status, face_labels))
+    except OSError as e:  # serial errors: the port vanished or another program is talking to the arm
+        others = other_users_of(robot.config.port) if robot else []
+        log.error(f"Lost contact with the arm ({e})" + (
+            "\nAnother program is using it:\n  " + "\n  ".join(others) if others else ""))
     finally:
         control.publish(mode="stopped")
         if voice_listener:
@@ -1623,6 +1916,21 @@ def run(args):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--camera", default="/dev/video0", help="camera mounted on the arm (path or index)")
+    p.add_argument("--home-reach", type=float, default=0.28, help="Reset pose: gripper tip metres in front of the base")
+    p.add_argument("--home-height", type=float, default=0.26, help="Reset pose: gripper tip metres above the base")
+    p.add_argument("--home-pitch", type=float, default=0.0,
+                   help="Reset pose: degrees the gripper points above (+) or below (-) level")
+    p.add_argument("--cover-seconds", type=float, default=2.0,
+                   help="cover the camera with your hand this long to release the phone")
+    p.add_argument("--cover-detail", type=float, default=15.0,
+                   help="picture counts as covered below this detail level")
+    p.add_argument("--party-speed", type=float, default=1.0,
+                   help="Party mode tempo (bigger = quicker direction changes, smaller swings once the servos "
+                        "can't reach the ends in time)")
+    p.add_argument("--rotate-deg", type=float, default=90.0,
+                   help="how far the Rotate button turns the phone (wrist_roll); it picks the direction with room")
+    p.add_argument("--camera-on-roll", choices=["no", "cw", "ccw"], default="no",
+                   help="if the camera turns with the phone, which way to turn the picture back after rotating")
     p.add_argument("--flip", action="store_true", help="rotate the image 180 deg (camera mounted upside down)")
     p.add_argument("--exposure", type=float,
                    help="manual exposure in 0.1 ms units (e.g. 300 for 30 fps in a dim room); default = camera auto")
@@ -1651,7 +1959,8 @@ def main():
                    help="move the phone straight up (or down, if negative) this many cm with IK, then hold")
     p.add_argument("--height", action="store_true",
                    help="follow up/down by moving the phone (shoulder+elbow via IK) as well as tilting")
-    p.add_argument("--gestures", action="store_true", help="enable closer/farther/freeze/resume via the vision worker")
+    p.add_argument("--gestures", action="store_true",
+                   help="enable closer/farther/freeze/resume and the hand twist (rotate) via the vision worker")
     p.add_argument("--gesture-python", default=str(ROOT / ".venv-vision/bin/python"), help="isolated vision Python interpreter")
     p.add_argument("--gesture-step", type=float, default=0.02, help="metres per closer/farther command")
     p.add_argument("--distance", type=float, help="follow at this approximate calibrated distance in metres")
@@ -1736,6 +2045,9 @@ def main():
         p.error("--preview-port must be between 0 and 65535")
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(asctime)s %(message)s")
+    # LeRobot warns each time a move is capped at 10 deg per command; Party mode does that on purpose
+    # dozens of times a second (it's how it runs the servos at full speed), so keep the log readable.
+    logging.getLogger("lerobot.robots.utils").setLevel(logging.ERROR)
     run(args)
 
 

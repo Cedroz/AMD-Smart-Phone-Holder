@@ -14,6 +14,8 @@ class HandObservation:
     y: float  # palm centre, normalised to the frame (0 top, 1 bottom)
     openness: float | None = None  # mean fingertip distance in palm lengths; see motion.hand_shape
     fingers: str | None = None  # 'up', 'down' or None when the hand is sideways
+    spread: float | None = None  # index-to-pinky knuckle width in palm lengths; small = edge-on; see motion.hand_pose
+    angle: float | None = None  # direction the fingers point, degrees: 0 up, +90 right, -90 left, 180 down
 
 
 @dataclass(frozen=True)

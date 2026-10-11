@@ -2,8 +2,9 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-from followme.gestures import (CLOSER, FARTHER, FREEZE, RESUME, BeckonDetector, GestureInterpreter,
-                               GesturePipeline, GestureZone, HandObservation, hand_shape)
+from followme.gestures import (CLOSER, FARTHER, FREEZE, LANDSCAPE, PORTRAIT, RESUME, BeckonDetector,
+                               GestureInterpreter, GesturePipeline, GestureZone, HandObservation, TwistDetector,
+                               hand_pose, hand_shape)
 from followme.phase5.replay import Clock
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -235,6 +236,102 @@ class RecognizerLandmarkTests(unittest.TestCase):
                 self.assertEqual(hands[0].label, 'None')
                 self.assertEqual(hands[0].fingers, 'up')
                 self.assertGreater(hands[0].openness, 1.6)
+
+
+def blade(angle, spread=.2, openness=2., label='Open_Palm', x=.5, y=.4):
+    """A flat hand seen edge-on (spread small) pointing at `angle` degrees (0 up, 90 right)."""
+    return HandObservation(label, .9, x, y, openness, None, spread, angle)
+
+
+def rotate_points(points, degrees, pivot=(.5, .5)):
+    import math
+    a = math.radians(degrees)
+    return [(pivot[0] + (x - pivot[0]) * math.cos(a) - (y - pivot[1]) * math.sin(a),
+             pivot[1] + (x - pivot[0]) * math.sin(a) + (y - pivot[1]) * math.cos(a)) for x, y in points]
+
+
+class HandPoseTests(unittest.TestCase):
+    def test_palm_facing_camera_is_wide_and_upright(self):
+        spread, angle = hand_pose(flat_hand())
+        self.assertGreater(spread, .5)
+        self.assertAlmostEqual(angle, 0, delta=1)
+
+    def test_edge_on_hand_is_narrow(self):
+        edge_on = [(.5 + (x - .5) * .2, y) for x, y in flat_hand()]  # knuckles nearly overlap
+        self.assertLess(hand_pose(edge_on)[0], .5)
+
+    def test_angle_follows_the_fingers(self):
+        self.assertAlmostEqual(hand_pose(rotate_points(flat_hand(), 90))[1], 90, delta=1)
+        self.assertAlmostEqual(hand_pose(rotate_points(flat_hand(), -90))[1], -90, delta=1)
+        self.assertAlmostEqual(abs(hand_pose(flat_hand(fingers_up=False))[1]), 180, delta=1)
+
+    def test_degenerate_hand(self):
+        self.assertEqual(hand_pose([(.5, .5)] * 21), (None, None))
+
+
+class TwistTests(unittest.TestCase):
+    def setUp(self):
+        self.clock = Clock()
+        self.detector = TwistDetector()
+
+    def run_frames(self, frames, detector=None):
+        detector, commands = detector or self.detector, []
+        for hands in frames:
+            self.clock.advance()
+            command = detector.update(hands, self.clock(), FACE)
+            if command:
+                commands.append(command)
+        return commands
+
+    @staticmethod
+    def turn(start, end, hold_frames=10, turn_frames=6, **hand):
+        """Hold at `start` degrees, sweep to `end`, hold there (20 Hz)."""
+        sweep = [start + (end - start) * i / turn_frames for i in range(1, turn_frames)]
+        return ([[blade(start, **hand)]] * hold_frames + [[blade(a, **hand)] for a in sweep]
+                + [[blade(end, **hand)]] * hold_frames)
+
+    def test_upright_to_sideways_rotates_to_landscape(self):
+        self.assertEqual(self.run_frames(self.turn(0, 90)), [LANDSCAPE])
+
+    def test_turning_back_rotates_to_portrait(self):
+        self.assertEqual(self.run_frames(self.turn(0, -90) + self.turn(-90, 0)), [LANDSCAPE, PORTRAIT])
+
+    def test_holding_one_pose_does_nothing(self):
+        self.assertEqual(self.run_frames([[blade(0)]] * 80), [])
+        self.assertEqual(self.run_frames([[blade(90)]] * 80, TwistDetector()), [])
+
+    def test_palm_facing_camera_does_not_count(self):
+        self.assertEqual(self.run_frames(self.turn(0, 90, spread=.85)), [])
+
+    def test_fist_does_not_count(self):
+        self.assertEqual(self.run_frames(self.turn(0, 90, openness=1.)), [])
+
+    def test_slow_steady_turn_still_counts(self):
+        self.assertEqual(self.run_frames(self.turn(0, 90, turn_frames=40)), [LANDSCAPE])
+
+    def test_pausing_half_way_is_ignored(self):
+        frames = [[blade(0)]] * 10 + [[blade(45)]] * 40 + [[blade(90)]] * 10
+        self.assertEqual(self.run_frames(frames), [])
+
+    def test_brief_flicker_is_ignored(self):
+        frames = [[blade(0)]] * 10 + [[blade(90)]] * 3 + [[blade(0)]] * 10
+        self.assertEqual(self.run_frames(frames), [])
+
+    def test_hand_outside_zone_is_ignored(self):
+        self.assertEqual(self.run_frames(self.turn(0, 90, y=.9)), [])
+
+    def test_lost_hand_resets(self):
+        frames = [[blade(0)]] * 10 + [[]] * 20 + [[blade(90)]] * 10
+        self.assertEqual(self.run_frames(frames), [])
+
+    def test_pipeline_twist_does_not_freeze(self):
+        pipeline, commands = GesturePipeline(), []
+        for hands in self.turn(0, 90, hold_frames=30) + self.turn(90, 0, hold_frames=30):
+            self.clock.advance()
+            command = pipeline.update(hands, self.clock(), FACE)
+            if command:
+                commands.append(command)
+        self.assertEqual(commands, [LANDSCAPE, PORTRAIT])
 
 
 @unittest.skipUnless(importlib.util.find_spec('mediapipe') and MODEL.is_file(), 'needs the vision environment and model')
