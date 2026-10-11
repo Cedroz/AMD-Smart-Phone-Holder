@@ -414,12 +414,36 @@ def connect_arm(port):
 
 def disconnect_arm(robot, args):
     """Disconnect with the arm holding its pose and the gripper motor off, so the clamp moves by hand."""
-    try:
-        robot.bus.disable_torque(GRIP, num_retry=3)
-        log.info("Gripper motor off: the clamp can be moved by hand")
-    except ConnectionError as e:
-        log.warning(f"Couldn't turn the gripper motor off ({e})")
+    # Read it back and retry: a garbled bus packet can drop the command and leave the clamp locked.
+    for attempt in range(5):
+        try:
+            robot.bus.disable_torque(GRIP, num_retry=3)
+            if robot.bus.read("Torque_Enable", GRIP, num_retry=3) == 0:
+                log.info("Gripper motor off: the clamp can be moved by hand")
+                break
+        except ConnectionError as e:
+            log.debug(f"Gripper off attempt {attempt + 1} failed: {e}")
+        time.sleep(0.1)
+    else:
+        log.warning("Couldn't confirm the gripper motor is off; trying again on a fresh connection")
+    port = robot.config.port
     robot.disconnect()
+    free_gripper_fresh(port)
+
+
+def free_gripper_fresh(port):
+    """The manual fix that always worked, as the very last step: a brand-new connection that only
+    turns the gripper motor off, then disconnects without touching the other motors."""
+    from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
+
+    try:
+        r = SO101Follower(SO101FollowerConfig(port=port, id=FOLLOWER_ID))
+        r.bus.connect()
+        r.bus.disable_torque(GRIP, num_retry=3)
+        r.bus.disconnect(disable_torque=False)
+        log.info("Gripper is free")
+    except Exception as e:  # never let this hide the real reason the program stopped
+        log.warning(f"Couldn't free the gripper on a fresh connection ({e})")
 
 
 def read_joints(robot):
