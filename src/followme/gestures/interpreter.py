@@ -6,6 +6,7 @@ FREEZE = 'freeze'
 RESUME = 'resume'
 LANDSCAPE = 'landscape'
 PORTRAIT = 'portrait'
+PARTY = 'party'
 DEFAULT_BINDINGS = {'Open_Palm': FREEZE, 'Thumb_Up': RESUME}
 
 
@@ -112,3 +113,41 @@ class LSignDetector:
         signs = [replace(hand, label=f'L_{hand.hand}', score=1.) for hand in hands
                  if hand.l_shape and hand.hand in ('Left', 'Right')]
         return self.interpreter.update(signs, now, face_center)
+
+
+class TwoPalmsDetector:
+    """Both hands up with open palms to the camera, held for `hold_s`: 'party'.
+
+    Fires once per raise (lower the hands before it can fire again), then waits `cooldown_s`.
+    The zone is wider than for one-hand gestures, since two raised hands sit out to either side.
+    While two palms are up, the pipeline keeps the single open-palm freeze from firing.
+    """
+
+    def __init__(self, hold_s=2.5, grace_s=.3, cooldown_s=3., min_score=.6, zone=None):
+        self.hold_s, self.grace_s, self.cooldown_s, self.min_score = hold_s, grace_s, cooldown_s, min_score
+        self.zone = zone or GestureZone(below_face=.6, beside_face=.6, max_y_without_face=.9)
+        self._since = self._last_seen = None
+        self._fired = False
+        self._cooldown_until = float('-inf')
+
+    def active(self, now):
+        """True while two palms are (or were just) up, so the single-palm freeze can be suppressed."""
+        return self._last_seen is not None and now - self._last_seen <= self.grace_s
+
+    def update(self, hands, now, face_center=None):
+        """Feed one frame's hands; returns 'party' or None."""
+        palms = [hand for hand in hands if hand.label == 'Open_Palm' and hand.score >= self.min_score
+                 and self.zone.contains(hand, face_center)]
+        if len(palms) < 2:
+            if self._last_seen is not None and now - self._last_seen > self.grace_s:
+                self._since = self._last_seen = None
+                self._fired = False
+            return None
+        if self._since is None:
+            self._since = now
+        self._last_seen = now
+        if self._fired or now < self._cooldown_until or now - self._since < self.hold_s:
+            return None
+        self._fired = True
+        self._cooldown_until = now + self.cooldown_s
+        return PARTY

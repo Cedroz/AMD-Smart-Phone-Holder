@@ -2,9 +2,9 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-from followme.gestures import (CLOSER, FARTHER, FREEZE, LANDSCAPE, PORTRAIT, RESUME, BeckonDetector,
+from followme.gestures import (CLOSER, FARTHER, FREEZE, LANDSCAPE, PARTY, PORTRAIT, RESUME, BeckonDetector,
                                GestureInterpreter, GesturePipeline, GestureZone, HandObservation, LSignDetector,
-                               PointDetector, hand_shape, l_shape, pointing)
+                               PointDetector, TwoPalmsDetector, hand_shape, l_shape, pointing)
 from followme.phase5.replay import Clock
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -396,6 +396,63 @@ class PointDetectorTests(unittest.TestCase):
             if command:
                 commands.append(command)
         self.assertEqual(set(commands), {CLOSER})
+
+
+def two_palms(spread=.25):
+    return [palm(x=.5 - spread), palm(x=.5 + spread)]
+
+
+class TwoPalmsTests(unittest.TestCase):
+    def setUp(self):
+        self.clock = Clock()
+
+    def feed(self, detector, hands, seconds):
+        commands = []
+        for _ in range(round(seconds / .05)):
+            self.clock.advance()
+            command = detector.update(hands, self.clock(), FACE)
+            if command:
+                commands.append(command)
+        return commands
+
+    def test_two_palms_for_two_and_a_half_seconds_party_once(self):
+        detector = TwoPalmsDetector()
+        self.assertEqual(self.feed(detector, two_palms(), 2.3), [])
+        self.assertEqual(self.feed(detector, two_palms(), 3), [PARTY])
+
+    def test_lowering_hands_too_soon_does_nothing(self):
+        detector = TwoPalmsDetector()
+        self.assertEqual(self.feed(detector, two_palms(), 2) + self.feed(detector, [], 1)
+                         + self.feed(detector, two_palms(), 2), [])
+
+    def test_one_palm_is_not_party(self):
+        self.assertEqual(self.feed(TwoPalmsDetector(), [palm()], 4), [])
+
+    def test_hands_wider_apart_than_one_hand_zone_still_count(self):
+        self.assertEqual(self.feed(TwoPalmsDetector(), two_palms(spread=.5), 3), [PARTY])
+
+    def test_raise_again_after_lowering(self):
+        detector = TwoPalmsDetector()
+        self.assertEqual(self.feed(detector, two_palms(), 3) + self.feed(detector, [], 4)
+                         + self.feed(detector, two_palms(), 3), [PARTY, PARTY])
+
+    def test_pipeline_two_palms_party_without_freezing(self):
+        pipeline, commands = GesturePipeline(), []
+        for hands in [two_palms()] * 60:
+            self.clock.advance()
+            command = pipeline.update(hands, self.clock(), FACE)
+            if command:
+                commands.append(command)
+        self.assertEqual(commands, [PARTY])
+
+    def test_pipeline_single_palm_still_freezes(self):
+        pipeline, commands = GesturePipeline(), []
+        for hands in [[palm()]] * 30:
+            self.clock.advance()
+            command = pipeline.update(hands, self.clock(), FACE)
+            if command:
+                commands.append(command)
+        self.assertEqual(commands, [FREEZE])
 
 
 @unittest.skipUnless(importlib.util.find_spec('mediapipe') and MODEL.is_file(), 'needs the vision environment and model')

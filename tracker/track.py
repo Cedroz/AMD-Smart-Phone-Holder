@@ -8,7 +8,7 @@ The preview also serves POST /commands and GET /status (Rotate 90 and Party mode
 buttons included). Optional --gestures
 uses the separate vision environment for closer/farther/freeze/resume commands (pointing the index
 finger up/down also moves the phone closer/farther); an L sign with the left hand rotates the phone
-to landscape, with the right hand back to portrait.
+to landscape, with the right hand back to portrait; both palms up for 2.5 s starts Party mode.
 Optional --distance maintains an approximate calibrated camera-to-user distance.
 Cover the camera with your hand for 2 s to release the phone (Grip phone puts it back).
 
@@ -1312,9 +1312,10 @@ def party(robot, args, stop, commands, should_stop=lambda: False):
     dancing are put back in the queue for the tracking loop.
     """
     start = read_joints(robot)
-    log.info(f"PARTY MODE (speed x{args.party_speed:g}) - press Party again to stop")
+    log.info(f"PARTY MODE (speed x{args.party_speed:g}) for {args.party_seconds:g} s - press Party again to stop sooner")
     deferred, last, t0 = [], {}, time.time()
-    while not stop.is_set() and not should_stop():
+    # It can't watch the camera while dancing, so a gesture can't stop it: end by itself after a while.
+    while not stop.is_set() and not should_stop() and time.time() - t0 < args.party_seconds:
         try:
             cmd = commands.get_nowait()
             if cmd == "party":
@@ -2022,6 +2023,8 @@ def main():
                    help="cover the camera with your hand this long to release the phone")
     p.add_argument("--cover-detail", type=float, default=15.0,
                    help="picture counts as covered below this detail level")
+    p.add_argument("--party-seconds", type=float, default=15.0,
+                   help="Party mode stops by itself after this long (it can't see gestures while dancing)")
     p.add_argument("--party-speed", type=float, default=1.0,
                    help="Party mode tempo (bigger = quicker direction changes, smaller swings once the servos "
                         "can't reach the ends in time)")
