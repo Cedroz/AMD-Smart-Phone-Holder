@@ -1,0 +1,10 @@
+# Python 3.12. Install torch first, from the CUDA index (RTX 50-series needs cu128 or newer):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+#   pip install -r face_recog/requirements.txt
+#   pip install --no-deps facenet-pytorch   # --no-deps: it pins an old torch that has no RTX 50 support
+pillow
+numpy
+scikit-learn
+opencv-python
+requests
+tqdm

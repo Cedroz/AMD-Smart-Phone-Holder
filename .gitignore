@@ -228,3 +228,9 @@ tracker/models/faces.tmp
 tracker/models/face_recognition_sface_2021dec.onnx
 build/
 *.egg-info/
+
+# face recognition: photos, datasets and trained weights stay local.
+# Only *.pt weights, not all of models/: the tracker's gesture and pose models live there too.
+# (models/face_recog.pt is already committed through Git LFS, so it stays tracked.)
+data/
+models/*.pt
