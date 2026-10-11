@@ -11,6 +11,8 @@ import socket
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -23,11 +25,14 @@ try:
 except ImportError:
     segno = None
 
-MODES = ("deactivate", "ambient", "spotlight")
+MODES = ("ambient", "spotlight")
+GRIPPER_ACTIONS = ("release", "grip")
+MOVE_COMMANDS = ("up", "down", "left", "right", "resume")  # D-pad, and resume tracking afterwards
 
 _state_lock = threading.Lock()
-_state = {"mode": "deactivate", "changed_at": time.time()}
+_state = {"mode": None, "held": True, "deactivated": False, "changed_at": time.time()}
 _public_url = ""
+_tracker_url = "http://127.0.0.1:8000"
 
 
 def lan_ip():
@@ -67,6 +72,36 @@ def apply_mode(mode):
     print(f"[remote] mode -> {mode}", flush=True)
 
 
+def apply_gripper(action):
+    """Forward release/grip to the tracker, which drives the gripper. Returns (HTTP status, body)."""
+    status, body = tracker_request("/commands", {"command": action})
+    print(f"[remote] gripper {action} -> tracker {status}", flush=True)
+    return status, body
+
+
+def tracker_request(path, payload=None, timeout=2.0):
+    """Call the tracker's API (tracker/track.py). Returns (HTTP status, JSON body)."""
+    data = None if payload is None else json.dumps(payload).encode()
+    request = urllib.request.Request(_tracker_url + path, data=data, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status, json.loads(response.read() or b"{}")
+    except urllib.error.HTTPError as error:
+        return error.code, json.loads(error.read() or b"{}")
+    except (urllib.error.URLError, OSError, ValueError):
+        return 502, {"error": f"tracker not reachable at {_tracker_url}"}
+
+
+def tracker_summary():
+    status, body = tracker_request("/status", timeout=0.5)
+    if status != 200:
+        return {"reachable": False}
+    return {"reachable": True, "mode": body.get("mode"), "dry_run": body.get("dry_run"),
+            "held": body.get("held"), "deactivated": body.get("deactivated"), "frozen": body.get("frozen"),
+            "voice": body.get("voice"), "motion_blocker": body.get("motion_blocker"),
+            "last_command": body.get("last_command")}
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "FollowMeRemote/0.1"
 
@@ -103,27 +138,86 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
         elif self.path == "/api/status":
+            tracker = tracker_summary()
             with _state_lock:
-                self._send_json(200, dict(_state))
+                # The tracker is the source of truth for the gripper and the master switch.
+                for key in ("held", "deactivated"):
+                    if tracker["reachable"] and tracker.get(key) is not None:
+                        _state[key] = tracker[key]
+                self._send_json(200, {**_state, "tracker": tracker})
         else:
             self._send_json(404, {"error": "not found"})
 
+    def _read_field(self, name):
+        length = int(self.headers.get("Content-Length", 0))
+        return json.loads(self.rfile.read(length) or b"{}").get(name)
+
     def do_POST(self):
-        if self.path != "/api/mode":
+        if self.path == "/api/test-motion":
+            status, body = tracker_request("/commands", {"command": "test_motion"})
+            if status == 422:
+                body = {"error": "this tracker has no test_motion command; restart tracker/track.py"}
+            print(f"[remote] test_motion -> tracker {status}", flush=True)
+            self._send_json(status, body)
+            return
+        if self.path == "/api/move":
+            try:
+                command = self._read_field("direction")
+            except (ValueError, AttributeError):
+                self._send_json(400, {"error": "invalid JSON"})
+                return
+            if command not in MOVE_COMMANDS:
+                self._send_json(400, {"error": f"direction must be one of {', '.join(MOVE_COMMANDS)}"})
+                return
+            status, body = tracker_request("/commands", {"command": command}, timeout=1.0)
+            if status == 422:
+                body = {"error": "this tracker has no D-pad; restart tracker/track.py"}
+            self._send_json(status, body if status == 202 or "error" in body else {"error": str(body.get("detail", body))})
+            return
+        if self.path == "/api/active":
+            try:
+                active = self._read_field("active")
+            except (ValueError, AttributeError):
+                self._send_json(400, {"error": "invalid JSON"})
+                return
+            if not isinstance(active, bool):
+                self._send_json(400, {"error": "active must be true or false"})
+                return
+            command = "activate" if active else "deactivate"
+            status, body = tracker_request("/commands", {"command": command})
+            print(f"[remote] {command} -> tracker {status}", flush=True)
+            if status == 422:
+                body = {"error": "this tracker has no master switch; restart tracker/track.py"}
+            if status != 202:
+                self._send_json(status, body if "error" in body else {"error": str(body.get("detail", body))})
+                return
+            with _state_lock:
+                _state.update(deactivated=not active, changed_at=time.time())
+                self._send_json(200, dict(_state))
+            return
+        if self.path not in ("/api/mode", "/api/gripper"):
             self._send_json(404, {"error": "not found"})
             return
+        field, allowed = ("mode", MODES) if self.path == "/api/mode" else ("action", GRIPPER_ACTIONS)
         try:
-            length = int(self.headers.get("Content-Length", 0))
-            mode = json.loads(self.rfile.read(length) or b"{}").get("mode")
+            value = self._read_field(field)
         except (ValueError, AttributeError):
             self._send_json(400, {"error": "invalid JSON"})
             return
-        if mode not in MODES:
-            self._send_json(400, {"error": f"mode must be one of {', '.join(MODES)}"})
+        if value not in allowed:
+            self._send_json(400, {"error": f"{field} must be one of {', '.join(allowed)}"})
             return
-        apply_mode(mode)
+        if field == "mode":
+            apply_mode(value)
+            update = {"mode": value}
+        else:
+            status, body = apply_gripper(value)
+            if status != 202:
+                self._send_json(status, body if "error" in body else {"error": str(body.get("detail", body))})
+                return
+            update = {"held": value == "grip"}
         with _state_lock:
-            _state.update(mode=mode, changed_at=time.time())
+            _state.update(update, changed_at=time.time())
             self._send_json(200, dict(_state))
 
     def log_message(self, format, *args):
@@ -132,13 +226,15 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    global _public_url, _tracker_url
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0", help="address to listen on")
     parser.add_argument("--port", type=int, default=8090)
     parser.add_argument("--url", help="address encoded in the QR code; defaults to this machine's LAN IP")
+    parser.add_argument("--tracker-url", default=_tracker_url, help="tracker/track.py API (its --preview-port)")
     args = parser.parse_args()
-    global _public_url
     _public_url = args.url or f"http://{lan_ip()}:{args.port}/"
+    _tracker_url = args.tracker_url.rstrip("/")
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     if segno is None:
         print("QR support missing; install it with:\n"

@@ -25,12 +25,12 @@ class MediaPipeGestureRecognizer:
         image = self._mp.Image(image_format=self._mp.ImageFormat.SRGB, data=rgb)
         result = self._recognizer.recognize_for_video(image, int(timestamp_ms))
         hands, aspect = [], frame_bgr.shape[1] / frame_bgr.shape[0]
-        for gestures, landmarks in zip(result.gestures, result.hand_landmarks):
-            if not gestures:
-                continue
+        for index, landmarks in enumerate(result.hand_landmarks):
+            gestures = result.gestures[index] if index < len(result.gestures) else []
+            label, score = (gestures[0].category_name, float(gestures[0].score)) if gestures else ("None", 0.0)
             wrist, knuckle = landmarks[WRIST], landmarks[MIDDLE_KNUCKLE]
             openness, fingers = hand_shape([(point.x, point.y) for point in landmarks], aspect)
-            hands.append(HandObservation(gestures[0].category_name, float(gestures[0].score),
+            hands.append(HandObservation(label, score,
                                          (wrist.x + knuckle.x) / 2, (wrist.y + knuckle.y) / 2, openness, fingers))
         return hands
 
@@ -88,8 +88,13 @@ def main():
                     raise ValueError('Invalid normalized face center')
                 hands = recognizer.recognize(frame, ms)
                 last_ms = ms
-                command = pipeline.update(hands, message['capture_monotonic_ns'] / 1e9, face)
-                channel.send({'type': 'result', **identity, 'command': command, 'error': None})
+                now = message['capture_monotonic_ns'] / 1e9
+                command = pipeline.update(hands, now, face)
+                feedback = {'hands': [{'label': hand.label, 'score': round(hand.score, 2),
+                             'x': hand.x, 'y': hand.y, 'fingers': hand.fingers,
+                             'openness': hand.openness, 'in_zone': pipeline.interpreter.zone.contains(hand, face)}
+                             for hand in hands], 'pending': pipeline.interpreter.pending(now), 'command': command}
+                channel.send({'type': 'result', **identity, 'command': command, 'gesture': feedback, 'error': None})
             except Exception as exc:
                 channel.send({'type': 'result', **identity, 'error': f'{type(exc).__name__}: {exc}'})
     finally:

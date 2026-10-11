@@ -5,6 +5,8 @@ import argparse
 import logging
 from pathlib import Path
 import time
+import threading
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -62,11 +64,14 @@ class FaceRecognizer:
         score = float(scores[best])
         return (str(self.names[best]) if score >= self.threshold else "unknown"), score
 
+    def recognize(self, frame):
+        """Return face landmarks, identity, and similarity for every visible face."""
+        return [(face, *self.identify(self.feature(frame, face))) for face in self.faces(frame)]
+
     def detect(self, frame):
         """Same box interface as track.py; optionally return only the named person."""
         boxes = []
-        for face in self.faces(frame):
-            name, score = self.identify(self.feature(frame, face))
+        for face, name, score in self.recognize(frame):
             if self.target_name is None or name == self.target_name:
                 boxes.append((*map(int, face[:4]), f"face:{name} {score:.2f}"))
         return boxes
@@ -82,6 +87,119 @@ class FaceRecognizer:
             np.savez_compressed(stream, names=names, features=vectors)
         temporary.replace(self.database)
         self.names, self.features = names, vectors
+
+
+class FaceEnrollment:
+    """HTTP requests change state; only the camera loop runs models and saves data."""
+
+    ACTIVE = ("starting", "running", "cancelling")
+
+    def __init__(self, database=DEFAULT_DB, threshold=0.45, recognizer=None,
+                 samples=20, seconds=60, clock=time.monotonic):
+        self.database, self.threshold = database, threshold
+        self.recognizer = recognizer
+        self.required, self.seconds, self.clock = samples, seconds, clock
+        self.lock = threading.RLock()
+        self.features = []
+        self.state = {"state": "idle", "name": "", "samples": 0, "total": samples,
+                      "message": "Enter a name to enroll a face."}
+
+    @property
+    def busy(self):
+        with self.lock:
+            return self.state["state"] in self.ACTIVE
+
+    def snapshot(self):
+        with self.lock:
+            return self.state.copy()
+
+    def start(self, name):
+        name = name.strip()
+        if not name or len(name) > 80 or name.lower() == "unknown" or not name.isprintable():
+            raise ValueError("Use a name of 1-80 characters; 'unknown' is reserved.")
+        with self.lock:
+            if self.busy:
+                raise RuntimeError("Enrollment is already running; cancel it first.")
+            self.features = []
+            self.deadline = self.clock() + self.seconds
+            self.last_sample = float("-inf")
+            self.state.update(state="starting", name=name, samples=0,
+                              message=f"Starting enrollment for {name}...")
+            return self.snapshot()
+
+    def cancel(self):
+        with self.lock:
+            if self.busy:
+                self.state.update(state="cancelling", message="Cancelling enrollment...")
+            return self.snapshot()
+
+    def labels(self, frame, boxes):
+        """Attach known identities to existing boxes without changing tracking targets."""
+        if not boxes:
+            return {}
+        if self.recognizer is None:
+            if not Path(self.database).is_file() or getattr(self, "_label_load_failed", False):
+                return {}
+            try:
+                self.recognizer = FaceRecognizer(self.database, self.threshold)
+            except (OSError, ValueError, cv2.error) as exc:
+                logging.warning("Face overlay unavailable: %s", exc)
+                self._label_load_failed = True
+                return {}
+        if not len(self.recognizer.names):
+            return {}
+        matches = {}
+        for face, name, score in self.recognizer.recognize(frame):
+            x, y, w, h = face[:4]
+            cx, cy = x + w / 2, y + h / 2
+            containing = [i for i, (bx, by, bw, bh, _) in enumerate(boxes)
+                          if bx <= cx <= bx + bw and by <= cy <= by + bh]
+            if containing:
+                # Prefer the face box over a larger overlapping body box.
+                index = min(containing, key=lambda i: boxes[i][2] * boxes[i][3])
+                matches.setdefault(index, []).append(name)
+        return {i: names[0] for i, names in matches.items()
+                if len(names) == 1 and names[0] != "unknown"}
+
+    def update(self, frame):
+        # Keep the lock through inference/save so cancel and restart cannot race a write.
+        # Sampling runs at most twice a second; normal tracking never takes this lock for inference.
+        with self.lock:
+            if not self.busy:
+                return
+            if self.state["state"] == "cancelling":
+                self.features = []
+                self.state.update(state="cancelled", message="Enrollment cancelled; saved faces unchanged.")
+                return
+            try:
+                now = self.clock()
+                if now >= self.deadline:
+                    raise TimeoutError("Enrollment timed out; saved faces unchanged. Try again with one face visible.")
+                if self.recognizer is None:
+                    self.recognizer = FaceRecognizer(self.database, self.threshold)
+                if self.state["state"] == "starting":
+                    self.state.update(state="running", message="Enrollment started. Keep one face in view and slowly turn your head.")
+                if frame is None:
+                    self.state["message"] = "Enrollment started; waiting for camera frames."
+                    return
+                if now - self.last_sample < 0.5:
+                    return
+                faces = self.recognizer.faces(frame)
+                if len(faces) != 1:
+                    self.state["message"] = ("No face detected; face the camera." if len(faces) == 0
+                                             else "Multiple faces detected; keep only the enrolling person in view.")
+                    return
+                self.features.append(self.recognizer.feature(frame, faces[0]))
+                self.last_sample = now
+                self.state.update(samples=len(self.features), message="Enrollment started; collecting samples. Slowly vary your head angle.")
+                if len(self.features) >= self.required:
+                    name = self.state["name"]
+                    self.recognizer.enroll(name, self.features)
+                    self.features = []
+                    self.state.update(state="completed", message=f"Done! Saved {name} ({self.required} samples).")
+            except Exception as exc:
+                self.features = []
+                self.state.update(state="error", message=f"Enrollment failed: {exc}")
 
 
 def main():
@@ -105,30 +223,34 @@ def main():
     recognizer = FaceRecognizer(args.database, args.threshold)
     if args.mode == "recognize" and not len(recognizer.names):
         parser.error("no enrolled faces; run enroll first")
-    preview = Preview(args.preview_port) if args.preview_port else None
+    enrollment = FaceEnrollment(args.database, args.threshold, recognizer,
+                                samples=args.samples, seconds=args.seconds)
+    if args.mode == "enroll":
+        enrollment.start(args.name)
+    def reject_motion(command):
+        raise ValueError("Motor commands are unavailable in face-only mode")
+    control = SimpleNamespace(enrollment=enrollment, submit=reject_motion,
+        snapshot=lambda: {"mode": args.mode, "enrollment": enrollment.snapshot()})
+    preview = Preview(args.preview_port, control) if args.preview_port else None
     camera = Camera(args.camera, exposure=args.exposure, flip=args.flip)
-    samples, seq, last_sample = [], 0, 0.0
-    deadline = time.monotonic() + args.seconds
+    seq = 0
     logging.info("Keep only the enrolling person in view; vary head angle and distance slightly."
                  if args.mode == "enroll" else "Recognizing enrolled faces; Ctrl+C to stop.")
     try:
-        while args.mode == "recognize" or time.monotonic() < deadline:
+        while True:
             seq, frame = camera.read(seq)
+            enrolling = enrollment.busy
+            enrollment.update(frame)
+            state = enrollment.snapshot()
+            if args.mode == "enroll" and state["state"] == "completed":
+                logging.info(state["message"])
+                return
+            if args.mode == "enroll" and state["state"] in ("error", "cancelled"):
+                raise SystemExit(state["message"])
             if frame is None:
                 continue
-            if args.mode == "enroll":
-                faces = recognizer.faces(frame)
-                now = time.monotonic()
-                # Multiple people would contaminate the label. Space samples out to vary poses.
-                if len(faces) == 1 and now - last_sample >= 0.5:
-                    samples.append(recognizer.feature(frame, faces[0]))
-                    last_sample = now
-                    logging.info("%s: %d/%d samples", args.name, len(samples), args.samples)
-                status = f"{args.name}: {len(samples)}/{args.samples} | keep exactly one face in view"
-                if len(samples) == args.samples:
-                    recognizer.enroll(args.name, samples)
-                    logging.info("Saved %s to %s", args.name, args.database)
-                    return
+            if enrolling:
+                status = f'{state["samples"]}/{state["total"]} | {state["message"]}'
             else:
                 boxes = recognizer.detect(frame)
                 for x, y, w, h, label in boxes:
@@ -140,14 +262,12 @@ def main():
                 cv2.putText(frame, status, (10, frame.shape[0] - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
                 preview.show(frame)
-        raise SystemExit(f"Enrollment timed out with {len(samples)}/{args.samples} samples; database unchanged")
     except KeyboardInterrupt:
         pass
     finally:
         camera.close()
         if preview:
-            preview.server.shutdown()
-            preview.server.server_close()
+            preview.close()
 
 
 if __name__ == "__main__":

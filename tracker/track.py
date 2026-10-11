@@ -24,6 +24,7 @@ import logging
 import os
 import queue
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -276,16 +277,47 @@ body{margin:0;background:#111;color:#eee;font-family:system-ui,sans-serif;text-a
 img{max-width:100%;display:block;margin:0 auto}
 button{font-size:1.2em;padding:.7em 1.6em;margin:.8em .4em;border:0;border-radius:.5em;cursor:pointer}
 #rel{background:#e5534b;color:#fff}#grip{background:#46954a;color:#fff}#msg{min-height:1.4em}
+#face-enrollment{max-width:640px;margin:1em auto;padding:1em;background:#222;border-radius:.6em}
+input{font:inherit;padding:.6em;border-radius:.4em;border:1px solid #666;max-width:55%}
+progress{width:90%;margin:.7em auto;display:block}button:disabled{opacity:.5;cursor:wait}
+#face-message{min-height:2.5em}
 </style></head><body><img src="/stream">
 <button onclick="send('closer')">Closer</button><button onclick="send('farther')">Farther</button>
 <button onclick="send('freeze')">Freeze</button><button onclick="send('resume')">Resume</button>
 <button id="rel" onclick="send('release')">Release phone</button>
-<button id="grip" onclick="send('grip')">Grip phone</button><div id="msg"></div><pre id="state"></pre>
+<button id="grip" onclick="send('grip')">Grip phone</button><div id="msg" role="status"></div>
+<section id="face-enrollment" aria-label="Face enrollment">
+<h2>Enroll a face</h2><p>Keep only this person in view and slowly vary their head angle.
+Tracking pauses while 20 samples are collected. Enrolling an existing name replaces its samples.</p>
+<form id="face-form"><label for="face-name">Name </label>
+<input id="face-name" maxlength="80" placeholder="e.g. Alice" required autocomplete="off">
+<button id="face-toggle" type="submit" disabled>Enroll face</button></form>
+<progress id="face-progress" value="0" max="20" aria-label="Enrollment progress"></progress>
+<div id="face-message" role="status" aria-live="polite">Connecting to tracker...</div></section>
+<pre id="state"></pre>
 <script>async function send(c){try{const r=await fetch('/commands',{method:'POST',
 headers:{'Content-Type':'application/json'},body:JSON.stringify({command:c})});
 msg.textContent=JSON.stringify(await r.json())}catch(e){msg.textContent='Could not reach the tracker'}}
-setInterval(async()=>{try{state.textContent=JSON.stringify(await(await fetch('/status')).json(),null,2)}
-catch(e){state.textContent='Tracker unavailable'}},500)</script></body></html>"""
+const faceName=document.getElementById('face-name'),faceToggle=document.getElementById('face-toggle'),
+faceMessage=document.getElementById('face-message'),faceProgress=document.getElementById('face-progress');
+let enrolling=false,facePending=false,pollPending=false;
+function showEnrollment(e){if(!e)return;enrolling=['starting','running','cancelling'].includes(e.state);
+faceName.disabled=enrolling;faceName.required=!enrolling;faceToggle.disabled=facePending||e.state==='cancelling';
+faceToggle.textContent=enrolling?'Cancel enrollment':'Enroll face';
+faceProgress.max=e.total;faceProgress.value=e.samples;
+faceMessage.textContent=e.message+(enrolling?' ('+e.samples+'/'+e.total+')':'');}
+document.getElementById('face-form').addEventListener('submit',async(event)=>{event.preventDefault();
+if(facePending)return;facePending=true;faceToggle.disabled=true;
+try{const r=await fetch(enrolling?'/faces/enrollment/cancel':'/faces/enrollment',{method:'POST',
+headers:{'Content-Type':'application/json'},body:JSON.stringify({name:faceName.value.trim()})});
+const result=await r.json();if(!r.ok)throw new Error(typeof result.detail==='string'?result.detail:'Enter a valid name.');
+showEnrollment(result);}catch(e){document.getElementById('msg').textContent=e.message;}
+finally{facePending=false;faceToggle.disabled=false;}});
+async function poll(){if(pollPending)return;pollPending=true;try{const r=await fetch('/status',{cache:'no-store'});
+if(!r.ok)throw new Error();const snapshot=await r.json();state.textContent=JSON.stringify(snapshot,null,2);
+showEnrollment(snapshot.enrollment);}catch(e){state.textContent='Tracker unavailable';
+faceMessage.textContent='Tracker unavailable; enrollment status cannot be confirmed.';faceToggle.disabled=true;}
+finally{pollPending=false;}}setInterval(poll,500);poll();</script></body></html>"""
 
 
 def create_api(control, preview=None):
@@ -296,12 +328,34 @@ def create_api(control, preview=None):
     app = FastAPI(title="Phone tracker")
 
     @app.post("/commands", status_code=202)
-    def command(command: Literal["closer", "farther", "freeze", "resume", "release", "grip"] = Body(embed=True)):
+    def command(command: Literal["closer", "farther", "freeze", "resume", "release", "grip", "test_motion",
+                                 "deactivate", "activate", "up", "down", "left", "right"] = Body(embed=True)):
         try:
             control.submit(command)
         except queue.Full:
             raise HTTPException(503, "Command queue is full")
+        except ValueError as exc:
+            raise HTTPException(409, str(exc))
         return {"accepted": True, "command": command}
+
+    @app.post("/voice", status_code=202)
+    def voice(speaker: str = Body(embed=True), confidence: float = Body(0.0, embed=True)):
+        """Speaker-ID results from acoustic/voice_bridge.py ("silence", "unknown" or a name)."""
+        control.hear(speaker, confidence)
+        return {"accepted": True}
+
+    @app.post("/faces/enrollment", status_code=202)
+    def enroll_face(name: str = Body(embed=True)):
+        try:
+            return control.enrollment.start(name)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc))
+        except RuntimeError as exc:
+            raise HTTPException(409, str(exc))
+
+    @app.post("/faces/enrollment/cancel", status_code=202)
+    def cancel_enrollment():
+        return control.enrollment.cancel()
 
     @app.get("/status")
     def status():
@@ -372,18 +426,19 @@ class Preview:
         self.thread.join(timeout=2)
 
 
-def annotate(frame, boxes, target, aim, deadband, status):
+def annotate(frame, boxes, target, aim, deadband, status, face_labels=None):
     h, w = frame.shape[:2]
     db = int(deadband * w / 2)
     cv2.line(frame, (w // 2 - db, 0), (w // 2 - db, h), (80, 80, 80), 1)
     cv2.line(frame, (w // 2 + db, 0), (w // 2 + db, h), (80, 80, 80), 1)
     cv2.drawMarker(frame, (w // 2, h // 2), (255, 255, 255), cv2.MARKER_CROSS, 20, 1)
-    for b in boxes:
+    for index, b in enumerate(boxes):
         x, y, bw, bh, kind = b
         color = (0, 255, 0) if b is target else (0, 160, 255)
         cv2.rectangle(frame, (x, y), (x + bw, y + bh), color, 2)
         label = f"{kind} {bw}px" if kind == "face" or kind.startswith("face:") else kind
-        cv2.putText(frame, label, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        label = (face_labels or {}).get(index, label)
+        cv2.putText(frame, label, (x, max(15, y - 5)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
     if aim is not None:
         cv2.circle(frame, (int(aim[0]), int(aim[1])), 6, (0, 0, 255), -1)
     cv2.putText(frame, status, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
@@ -447,7 +502,7 @@ def disconnect_arm(robot, args):
         try:
             robot.bus.disable_torque(GRIP, num_retry=3)
             log.info("Gripper motor off: you can open it by hand (use --keep-grip to keep it clamped)")
-        except ConnectionError as e:
+        except BUS_ERRORS as e:
             log.warning(f"Couldn't switch the gripper off ({e})")
     robot.disconnect()
 
@@ -501,6 +556,13 @@ class HeightIK:
         self.z0 = float(self.home[2, 3])
         self.reach0 = float(self.home[0, 3])
 
+    def camera_pitch(self, tilt_offset=0.0, mounting_offset=0.0):
+        """Upward camera pitch in degrees; gripper-frame +Z points forward in this URDF."""
+        q = self.q.copy()
+        q[3] += tilt_offset
+        forward = self.kin.forward_kinematics(q)[:3, 2]
+        return float(np.degrees(np.arctan2(forward[2], np.hypot(forward[0], forward[1])))) + mounting_offset
+
     def solve(self, z, reach=None):
         """Joints for height z and optional forward reach, with the start orientation.
 
@@ -523,6 +585,11 @@ class HeightIK:
         return q, pos_err, ang_err
 
 
+def valid_ik(hik, q, pos_err, ang_err):
+    jump = float(np.abs(q - hik.q)[1:4].max())
+    return np.isfinite(q).all() and pos_err < 0.01 and ang_err < 5 and jump < MAX_IK_JUMP_DEG
+
+
 def plane_action(q, tilt_offset=0.0):
     return {
         "shoulder_lift.pos": float(q[1]),
@@ -535,6 +602,188 @@ def move_gripper(robot, start, end, seconds=1.0, steps=20):
     for s in range(1, steps + 1):
         robot.send_action({f"{GRIP}.pos": float(start + (end - start) * s / steps)})
         time.sleep(seconds / steps)
+
+
+# Bus failures: ConnectionError for garbled/missing replies, RuntimeError when a servo reports an error
+# such as "Overload error" (its overload protection has tripped).
+BUS_ERRORS = (ConnectionError, RuntimeError)
+# Gripper targets stay this far (0-100 scale) from either end: on this arm the jaws meet at ~2, and a
+# servo pushing on an end stop trips its overload protection.
+GRIP_END_MARGIN = 8.0
+
+
+def set_grip_torque(robot, percent):
+    """Live gripper force limit, % of the motor's max (LeRobot caps the gripper at 50 %)."""
+    try:
+        robot.bus.write("Torque_Limit", GRIP, int(np.clip(percent, 0, 50) * 10), num_retry=3)
+    except BUS_ERRORS as e:
+        log.warning(f"Couldn't set the gripper force limit ({e})")
+
+
+def prepare_fast_gripper(robot):
+    """Servo settings for the quickest gripper: no speed cap and the factory position gain.
+
+    LeRobot already sets the fastest acceleration (254) and halves the gain to 16 for smooth arm motion;
+    the gripper only opens and closes, so it gets the snappier factory gain of 32.
+    """
+    try:
+        if robot.bus.read("Goal_Velocity", GRIP, normalize=False, num_retry=3) != 0:
+            robot.bus.write("Goal_Velocity", GRIP, 0, normalize=False, num_retry=3)  # 0 = full speed
+        robot.bus.write("P_Coefficient", GRIP, 32, normalize=False, num_retry=3)
+    except BUS_ERRORS as e:
+        log.warning(f"Couldn't speed up the gripper ({e})")
+
+
+def drive_gripper(robot, target, move_torque, hold_torque, timeout=1.5):
+    """Send the gripper straight to `target` with one command so the servo moves at full speed.
+
+    This deliberately skips the per-command max_relative_target cap, which exists for arm swings. Force
+    is `move_torque` % during the move and `hold_torque` % afterwards; pass the holding force for any
+    move that could close on something. If the jaws stop short (on the phone), the goal is set to
+    where they stopped so the servo isn't left pushing. Raises BUS_ERRORS if the servo can't be
+    commanded. Returns (final position, True if it stopped short of the target).
+    """
+    target = float(np.clip(target, GRIP_END_MARGIN, 100.0 - GRIP_END_MARGIN))
+    set_grip_torque(robot, move_torque)
+    robot.bus.write("Goal_Position", GRIP, target, num_retry=3)
+    t0 = time.monotonic()
+    pos, last, moved_at, blocked = None, None, t0, False
+    while time.monotonic() - t0 < timeout:
+        time.sleep(0.01)
+        try:
+            pos = float(robot.bus.read("Present_Position", GRIP, num_retry=1))
+        except BUS_ERRORS:
+            continue
+        if abs(pos - target) < 1.5:
+            break
+        if last is None or abs(pos - last) > 0.3:
+            moved_at = time.monotonic()
+        elif time.monotonic() - moved_at > 0.15:
+            blocked = True
+            robot.bus.write("Goal_Position", GRIP, pos, num_retry=3)
+            break
+        last = pos
+    set_grip_torque(robot, hold_torque)
+    return pos, blocked
+
+
+def joint_limits(robot):
+    """Calibrated travel of each arm joint, in the same degrees as the actions; None if unavailable."""
+    try:
+        limits = {}
+        for j in ARM_JOINTS:
+            cal, motor_id = robot.bus.calibration[j], robot.bus.motors[j].id
+            ends = [robot.bus._normalize({motor_id: v})[motor_id] for v in (cal.range_min, cal.range_max)]
+            limits[j] = (min(ends), max(ends))
+        return limits
+    except Exception as e:
+        log.warning(f"Couldn't read joint limits ({e})")
+        return None
+
+# Motor test (test_motion command): degrees each joint moves. Pan and wrist roll sweep both ways;
+# shoulder lift, elbow and wrist flex only move in the direction that raises the phone.
+TEST_MOTION_DEG = {"shoulder_pan": 30.0, "shoulder_lift": 15.0, "elbow_flex": 40.0, "wrist_flex": 25.0,
+                   "wrist_roll": 40.0}
+SWEEP_JOINTS = ("shoulder_pan", "wrist_roll")
+
+
+def plan_test_motion(urdf, start, scale, limits=None, margin=5.0):
+    """Per-joint signed amplitudes for the motor test, chosen with the arm model so the phone goes up.
+
+    Each lifting joint gets the sign that raises the gripper tip from `start`; then the whole path is
+    checked and the lifting moves are halved until the tip never dips more than 1 cm below where it
+    started. Without the model only the sweeping joints move. Returns (amplitudes, predicted rise in m).
+    """
+    amps = {j: TEST_MOTION_DEG[j] * scale for j in ARM_JOINTS}
+    if limits is None:
+        log.warning("Motor test: joint limits unknown; using half-size moves")
+        amps = {j: a / 2 for j, a in amps.items()}
+
+    def within_limits(j, a):
+        """Shrink amplitude `a` so the joint stays `margin` inside its travel (both ways for sweeps)."""
+        if limits is None:
+            return a
+        lo, hi = limits[j][0] + margin, limits[j][1] - margin
+        room_up, room_down = max(0.0, hi - start[j]), max(0.0, start[j] - lo)
+        if j in SWEEP_JOINTS:
+            return min(abs(a), room_up, room_down)
+        return min(a, room_up) if a >= 0 else max(a, -room_down)
+    try:
+        from lerobot.model.kinematics import RobotKinematics
+        kin = RobotKinematics(urdf, "gripper_frame_link", ARM_JOINTS)
+    except Exception as e:
+        log.warning(f"Motor test: no arm model ({e}); only sweeping {', '.join(SWEEP_JOINTS)}")
+        return {j: (within_limits(j, amps[j]) if j in SWEEP_JOINTS else 0.0) for j in ARM_JOINTS}, None
+
+    q0 = np.array([start[j] for j in ARM_JOINTS], dtype=float)
+    z = lambda q: float(kin.forward_kinematics(q)[2, 3])
+    z0 = z(q0)
+    for i, j in enumerate(ARM_JOINTS):
+        if j not in SWEEP_JOINTS:
+            step = np.zeros(len(ARM_JOINTS))
+            step[i] = 2.0
+            amps[j] = within_limits(j, abs(amps[j]) if z(q0 + step) >= z0 else -abs(amps[j]))
+        else:
+            amps[j] = within_limits(j, amps[j])
+    lift = np.array([0.0 if j in SWEEP_JOINTS else amps[j] for j in ARM_JOINTS])
+    for _ in range(4):
+        heights = [z(q0 + lift * phase) for phase in np.linspace(0, 1, 21)]
+        if min(heights) >= z0 - 0.01:
+            break
+        lift /= 2
+    else:
+        lift[:] = 0.0
+        heights = [z0]
+    amps.update({j: float(lift[i]) for i, j in enumerate(ARM_JOINTS) if j not in SWEEP_JOINTS})
+    return amps, max(heights) - z0
+
+
+def exercise_joints(robot, amps, seconds=10.0, period=2.0, should_stop=lambda: False, gripper=None,
+                    gripper_period=0.5):
+    """Mobile-to-motor check: move the arm joints by `amps` (degrees) and back, repeatedly.
+
+    Sweeping joints go +/- amplitude; the others go out to amplitude and back. With
+    gripper=(closed, open) the gripper also snaps fully closed and open each `gripper_period` seconds
+    with direct full-speed commands, ending open (the caller sets its force). Starts and ends at the
+    current pose. Returns False if stopped early; it still eases back rather than jumping.
+    """
+    base = read_joints(robot)
+    joints = list(ARM_JOINTS)
+    snaps = -1
+
+    def offsets(t):
+        ramp = min(1.0, t / 0.5)  # ease the sweeps in so they don't start at full speed
+        lift = 0.5 - 0.5 * np.cos(2 * np.pi * t / period)
+        sweep = ramp * np.sin(2 * np.pi * t / period)
+        return {j: amps[j] * (sweep if j in SWEEP_JOINTS else lift) for j in ARM_JOINTS}
+
+    def send(off):
+        robot.send_action({f"{j}.pos": float(base[j] + off[j]) for j in joints})
+
+    t0, last, completed = time.monotonic(), {j: 0.0 for j in joints}, True
+    while (t := time.monotonic() - t0) < seconds:
+        if should_stop():
+            completed = False
+            break
+        last = offsets(t)
+        send(last)
+        if gripper and int(t / (gripper_period / 2)) != snaps:  # closed for half a period, then open
+            snaps = int(t / (gripper_period / 2))
+            try:
+                robot.bus.write("Goal_Position", GRIP, float(gripper[snaps % 2]), num_retry=1)
+            except BUS_ERRORS as e:
+                log.warning(f"Motor test: gripper stopped responding ({e}); continuing without it")
+                gripper = None
+        time.sleep(0.05)
+    if gripper:
+        try:
+            robot.bus.write("Goal_Position", GRIP, float(gripper[1]), num_retry=3)
+        except BUS_ERRORS as e:
+            log.warning(f"Motor test: couldn't reopen the gripper ({e})")
+    for s in range(1, 21):
+        send({j: last[j] * (1 - s / 20) for j in joints})
+        time.sleep(0.05)
+    return completed
 
 
 def gentle_squeeze(robot, args, start):
@@ -735,26 +984,55 @@ class DepthFollower:
 
 
 class TrackerControl:
-    """Shared commands; only the tracking loop mutates control state or moves motors."""
-    COMMANDS = ("closer", "farther", "freeze", "resume", "release", "grip")
+    """Shared commands; only the tracking loop mutates control state or moves motors.
+
+    deactivate/activate are the master switch: while deactivated the arm holds its pose and every
+    other motion command (including gesture freeze/resume) is ignored until `activate`. Release and
+    grip stay available so the phone can still be taken out.
+    """
+    COMMANDS = ("closer", "farther", "freeze", "resume", "release", "grip", "test_motion", "deactivate", "activate",
+                "up", "down", "left", "right")
+    DPAD = ("up", "down", "left", "right")
 
     def __init__(self, args):
         self.args = args
         self.commands = queue.Queue(maxsize=32)
         self.frozen = False
+        self.deactivated = False
+        # Set as soon as deactivate is submitted (from the API thread), so a running motor test stops at once.
+        self.deactivate_requested = threading.Event()
+        self.voice = {"speaker": None, "confidence": 0.0, "at": 0.0}  # latest result from acoustic/voice_bridge.py
         self.reach0 = self.reach = self.requested_reach = 0.0
         self.depth = DepthFollower(args) if args.distance is not None else None
         self.last_command = None
         self.lock = threading.Lock()
         self.status = {}
+        try:
+            from .faces import FaceEnrollment
+        except ImportError:
+            from faces import FaceEnrollment
+        self.enrollment = FaceEnrollment(getattr(args, "face_db", Path(MODELS_DIR) / "faces.npz"),
+                                         getattr(args, "face_threshold", 0.45))
         self.publish(mode="starting", held=True, target_visible=False)
 
     def submit(self, command):
         if command not in self.COMMANDS:
             raise ValueError("Unknown command")
+        if command == "deactivate":
+            self.deactivate_requested.set()
         self.commands.put_nowait(command)
 
     def apply(self, command, held=True):
+        if command == "deactivate":
+            self.deactivated = True
+            self.requested_reach = self.reach  # cancel unfinished manual depth moves
+            return "applied"
+        if command == "activate":
+            self.deactivated = self.frozen = False
+            self.deactivate_requested.clear()
+            return "applied"
+        if self.deactivated:
+            return "ignored: deactivated"
         if command == "freeze":
             self.frozen = True
             self.requested_reach = self.reach  # cancel unfinished manual depth moves
@@ -781,10 +1059,26 @@ class TrackerControl:
         step = min(0.004, self.args.depth_rate * max(0.0, min(dt, 0.1)))
         return self.reach + float(np.clip(self.requested_reach - self.reach, -step, step))
 
+    def hear(self, speaker, confidence):
+        """Called from the API thread for every speaker-ID hop (about twice a second)."""
+        with self.lock:
+            self.voice = {"speaker": speaker, "confidence": float(confidence), "at": time.monotonic()}
+
+    def heard(self, name, within):
+        """True if the voice listener identified `name` in the last `within` seconds."""
+        with self.lock:
+            v = self.voice
+            return v["speaker"] == name and time.monotonic() - v["at"] <= within
+
     def publish(self, **fields):
         with self.lock:
             self.status.update(fields)
-            self.status.update(frozen=self.frozen, dry_run=self.args.dry_run,
+            heard = self.voice["speaker"]
+            self.status.update(voice={"target": getattr(self.args, "voice", None), "speaker": heard,
+                                      "confidence": self.voice["confidence"],
+                                      "age": round(time.monotonic() - self.voice["at"], 1) if heard else None,
+                                      "hold": getattr(self.args, "voice_hold", None)})
+            self.status.update(frozen=self.frozen, deactivated=self.deactivated, dry_run=self.args.dry_run,
                 target_distance=self.args.distance, estimated_distance=self.depth.distance if self.depth else None,
                 reach=self.reach, requested_reach=None if self.depth else self.requested_reach,
                 reach_min=self.reach0 - self.args.depth_back, reach_max=self.reach0 + self.args.depth_forward,
@@ -794,7 +1088,36 @@ class TrackerControl:
 
     def snapshot(self):
         with self.lock:
-            return self.status.copy()
+            snapshot = self.status.copy()
+        snapshot["enrollment"] = self.enrollment.snapshot()
+        return snapshot
+
+
+def start_voice(args):
+    """Face recognizer for the voice target, plus acoustic/voice_bridge.py in the speakerid env.
+
+    The bridge listens all the time and POSTs each speaker-ID result to this tracker's /voice.
+    """
+    try:
+        from .faces import FaceRecognizer
+    except ImportError:
+        from faces import FaceRecognizer
+    if not args.preview_port:
+        raise SystemExit("--voice needs the tracker API: don't pass --preview-port 0")
+    recognizer = FaceRecognizer(args.face_db, args.face_threshold)
+    if args.voice not in recognizer.names:
+        raise SystemExit(f"--voice {args.voice}: that face is not enrolled in {args.face_db}; enroll it first")
+    command = [args.voice_python, "-u", str(ROOT / "acoustic" / "voice_bridge.py"),
+               "--tracker-url", f"http://127.0.0.1:{args.preview_port}"]
+    if args.voice_local_mic is not None:
+        command += ["--local-mic", "--device", str(args.voice_local_mic)]
+    log_path = ROOT / "acoustic" / "voice_bridge.log"
+    listener = subprocess.Popen(command, cwd=ROOT / "acoustic", stdin=subprocess.DEVNULL,
+                                stdout=open(log_path, "w"), stderr=subprocess.STDOUT)
+    source = f"microphone {args.voice_local_mic} on this machine" if args.voice_local_mic is not None \
+        else "the laptop mic (run acoustic/mac_mic_sender.py and the SSH tunnel)"
+    log.info(f"Voice: listening for {args.voice} via {source}; log in {log_path}")
+    return recognizer, listener
 
 
 def start_gestures(args):
@@ -819,7 +1142,7 @@ def run(args):
 
     one_shot = (args.test_pan or args.test_tilt or args.check_ik or args.test_height or args.raise_cm
                 or args.test_gripper)
-    cam = robot = preview = gestures = None
+    cam = robot = preview = gestures = voice_listener = None
     control = TrackerControl(args)
     try:
         cam = None if one_shot else Camera(args.camera, exposure=args.exposure, flip=args.flip)
@@ -835,7 +1158,15 @@ def run(args):
                     return
 
         have_models = os.path.exists(YOLO_MODEL) and os.path.exists(FACE_MODEL)
-        if args.detector == "face+body" or (args.detector == "auto" and have_models):
+        if args.follow_face:
+            try:
+                from .faces import FaceRecognizer
+            except ImportError:
+                from faces import FaceRecognizer
+            detector = FaceRecognizer(args.face_db, args.face_threshold, args.follow_face)
+            control.enrollment.recognizer = detector
+            log.info("Detector: YuNet + SFace, following %s", args.follow_face)
+        elif args.detector == "face+body" or (args.detector == "auto" and have_models):
             detector = FaceAndBodyDetector(YOLO_MODEL, FACE_MODEL)
             log.info("Detector: YuNet face + YOLO body")
         elif args.detector == "yolo":
@@ -846,6 +1177,9 @@ def run(args):
             log.info("Detector: OpenCV Haar/HOG (models not found in tracker/models/)")
         commands = control.commands
         gestures = start_gestures(args) if args.gestures else None
+        recognizer = voice_listener = None
+        if args.voice:
+            recognizer, voice_listener = start_voice(args)
         preview = Preview(args.preview_port, control) if args.preview_port else None
         if sys.stdin.isatty():
             def read_terminal():
@@ -885,6 +1219,7 @@ def run(args):
             if args.gripper_open_sign and args.squeeze > 0:
                 grip_home = gentle_squeeze(robot, args, grip_home)
             if args.gripper_open_sign:
+                prepare_fast_gripper(robot)
                 log.info(f"Gripper: holding at {grip_home:.1f}; release: 'r'+ENTER or the page button, grip: 'g'+ENTER")
                 if args.release_on_pull:
                     pull = PullDetector(args.pull_threshold, args.pull_time)
@@ -892,20 +1227,78 @@ def run(args):
             elif args.release_on_pull:
                 log.warning("--release-on-pull ignored: run --test-gripper and pass --gripper-open-sign first")
 
+        # Nearly shut, but short of the end stop (drive_gripper keeps targets GRIP_END_MARGIN from the ends).
+        gripper_closed = 0.0 if args.gripper_open_sign > 0 else 100.0
+
         def release(reason):
             nonlocal held, pull_warned
             log.info(f"Releasing phone ({reason})")
-            move_gripper(robot, grip_home, grip_home + args.gripper_open_sign * args.release_amount)
+            drive_gripper(robot, grip_home + args.gripper_open_sign * args.release_amount,
+                          args.grip_move_torque, args.grip_torque)
             held, pull_warned = False, False
 
         def grip():
-            nonlocal held
-            log.info("Gripping phone; tracking resumes in 1 s")
-            move_gripper(robot, grip_home + args.gripper_open_sign * args.release_amount, grip_home, seconds=1.5)
+            nonlocal held, grip_home
+            # Close at full speed but only holding force, so stopping on the phone (or a finger) never
+            # stalls the servo hard enough to trip its overload protection; then press lightly.
+            pos, blocked = drive_gripper(robot, gripper_closed, args.grip_torque, args.grip_torque)
+            if pos is not None:
+                grip_home = pos
+                if blocked:
+                    grip_home = pos - args.gripper_open_sign * 1.5
+                    robot.bus.write("Goal_Position", GRIP, float(grip_home), num_retry=3)
+            log.info(f"Gripped at {grip_home:.1f}" + (" (on the phone)" if blocked else " (nearly shut, nothing in the jaws)")
+                     + "; tracking resumes in 1 s")
             time.sleep(1.0)
             if pull:
                 pull.reset()
             held = True
+
+        def nudge(direction):
+            """D-pad: move one step and take over from tracking, which stays paused until `resume`.
+
+            left/right turn the base (the camera's own left/right, as in --test-pan); up/down move the
+            phone with the height IK in the same 4 mm steps and checks as tracking, or tilt the wrist
+            when there is no IK.
+            """
+            nonlocal pan_goal, tilt_goal, z_goal
+            control.frozen = True  # otherwise tracking would immediately undo the move
+            control.requested_reach = control.reach
+            if direction in ("left", "right"):
+                sign = 1 if direction == "right" else -1
+                new = float(np.clip(pan_goal + sign * args.pan_sign * args.dpad_pan_step,
+                                    pan_home - args.pan_limit, pan_home + args.pan_limit))
+                if new == pan_goal:
+                    return "ignored: at the pan limit"
+                pan_goal = new
+                robot.send_action({f"{PAN}.pos": pan_goal})
+                return "applied"
+            up = 1 if direction == "up" else -1
+            if hik:
+                start = z_goal
+                target = float(np.clip(start + up * args.dpad_height_step,
+                                       hik.z0 - args.height_down, hik.z0 + args.height_up))
+                steps = max(1, int(np.ceil(abs(target - start) / 0.004)))
+                for i in range(1, steps + 1):
+                    z_new = start + (target - start) * i / steps
+                    q, pos_err, ang_err = hik.solve(z_new, control.reach)
+                    if not valid_ik(hik, q, pos_err, ang_err):
+                        break
+                    hik.q, z_goal = q, z_new
+                    robot.send_action(plane_action(hik.q, tilt_offset))
+                    time.sleep(0.02)
+                moved = z_goal - start
+                if abs(moved) < 1e-4:
+                    return "ignored: can't move further that way"
+                return "applied" if abs(z_goal - target) < 1e-4 else f"partly applied ({moved * 100:+.1f} cm)"
+            # Positive tilt points the camera down (see --test-tilt).
+            new = float(np.clip(tilt_goal - up * args.tilt_sign * args.dpad_tilt_step,
+                                tilt_home - args.tilt_limit, tilt_home + args.tilt_limit))
+            if new == tilt_goal:
+                return "ignored: at the tilt limit"
+            tilt_goal = new
+            robot.send_action({f"{TILT}.pos": tilt_goal})
+            return "applied"
 
         def process_commands():
             nonlocal hik, z_goal
@@ -920,17 +1313,66 @@ def run(args):
                     elif not args.gripper_open_sign:
                         result = "ignored: gripper direction is not configured"
                     elif cmd == "release" and held:
-                        release("command")
-                        control.requested_reach = control.reach
-                        result = "applied"
+                        try:
+                            release("command")
+                            control.requested_reach = control.reach
+                            result = "applied"
+                        except BUS_ERRORS as e:
+                            log.error(f"Release failed: {e}")
+                            result = f"failed: gripper error ({e})"
                     elif cmd == "grip" and not held:
-                        grip()
-                        result = "applied"
+                        try:
+                            grip()
+                            result = "applied"
+                        except BUS_ERRORS as e:
+                            log.error(f"Grip failed: {e}")
+                            result = f"failed: gripper error ({e})"
                     else:
                         result = "already applied"
+                elif cmd in control.DPAD:
+                    if control.deactivated:
+                        result = "ignored: deactivated"
+                    elif control.enrollment.busy:
+                        result = "ignored: face enrollment in progress"
+                    elif not robot:
+                        result = "ignored: dry run"
+                    else:
+                        try:
+                            result = nudge(cmd)
+                        except BUS_ERRORS as e:
+                            log.error(f"D-pad {cmd} failed: {e}")
+                            result = f"failed: {e}"
+                elif cmd == "test_motion":
+                    if control.enrollment.busy:
+                        result = "ignored: face enrollment in progress"
+                    elif control.deactivated:
+                        result = "ignored: deactivated"
+                    elif not robot:
+                        result = "ignored: dry run"
+                    else:
+                        control.publish(mode="test_motion")
+                        scale = float(np.clip(args.test_motion_scale, 0.0, 1.5))
+                        amps, rise = plan_test_motion(args.urdf, read_joints(robot), scale, joint_limits(robot))
+                        # Opening the gripper drops a held phone, so it only joins in once released.
+                        gripper = None
+                        if args.gripper_open_sign and grip_home is not None and not held:
+                            ends = (GRIP_END_MARGIN, 100.0 - GRIP_END_MARGIN)
+                            gripper = tuple(float(np.clip(v, *ends)) for v in
+                                            (gripper_closed, grip_home + args.gripper_open_sign * args.release_amount))
+                            set_grip_torque(robot, args.grip_torque)  # snaps close on nothing, but a finger may be there
+                        log.info("Motor test for 10 s: " + ", ".join(f"{j} {a:+.0f}" for j, a in amps.items())
+                                 + (f" deg; phone rises up to {rise * 100:.0f} cm" if rise is not None else " deg")
+                                 + ("; gripper opening/closing" if gripper else "; gripper stays shut (phone held)"))
+                        done = exercise_joints(robot, amps, gripper=gripper, should_stop=lambda: (
+                            stop.is_set() or control.deactivate_requested.is_set() or control.enrollment.busy))
+                        if gripper:
+                            set_grip_torque(robot, args.grip_torque)
+                        result = "applied" if done else "stopped early"
+                        if not gripper and held:
+                            result += " (gripper skipped: release the phone first)"
                 else:
                     if (cmd in ("closer", "farther") and robot and hik is None
-                            and not control.frozen and held):
+                            and not control.frozen and not control.deactivated and held):
                         hik = HeightIK(args.urdf, read_joints(robot))
                         z_goal = hik.z0
                         control.reach0 = control.reach = control.requested_reach = hik.reach0
@@ -945,19 +1387,39 @@ def run(args):
         frames, t_fps, fps, cam_fps = 0, time.time(), 0.0, 0.0
         t_end = time.time() + args.max_seconds if args.max_seconds else None
 
+        voice_was_on, voice_seen, search_dir = False, 0.0, 1.0
         last_control = time.monotonic()
         while not stop.is_set() and (t_end is None or time.time() < t_end):
             process_commands()
             seq, frame = cam.read(seq)
             now_control = time.monotonic()
             dt, last_control = now_control - last_control, now_control
+            enrolling = control.enrollment.busy
+            control.enrollment.update(frame)
+            if enrolling:
+                smoothed = None
+                control.requested_reach = control.reach
             if frame is None:
-                control.publish(mode="frozen" if control.frozen else "hold", target_visible=False, motion_blocker="camera unavailable")
+                control.publish(mode="deactivated" if control.deactivated else ("frozen" if control.frozen else "hold"), target_visible=False, motion_blocker="camera unavailable")
                 log.warning("No new frame from the camera for 1 s")
                 continue
             h, w = frame.shape[:2]
 
-            boxes = detector.detect(frame)
+            # Voice: while the target's voice was heard recently, follow only their face; if it isn't in
+            # view, sweep the base to look for them.
+            voice_on = bool(recognizer) and control.heard(args.voice, args.voice_hold)
+            if voice_on != voice_was_on:
+                smoothed, voice_was_on = None, voice_on  # switch people immediately, not via max_jump
+                log.info(f"Voice: heard {args.voice}, looking for them" if voice_on else "Voice: back to normal tracking")
+            if enrolling:
+                boxes = []
+            elif voice_on:
+                boxes = [b for b in recognizer.detect(frame) if b[4].startswith(f"face:{args.voice} ")]
+                if boxes:
+                    voice_seen = time.time()
+            else:
+                boxes = detector.detect(frame)
+            face_labels = control.enrollment.labels(frame, boxes) if preview and not enrolling else {}
             target = pick_target(boxes, smoothed, args.max_jump * w)
             if target is not None:
                 aim = aim_point(target)
@@ -979,6 +1441,14 @@ def run(args):
                     reply = gestures.infer("external", seq, time.monotonic_ns(), jpeg.tobytes(), face_center=face_center)
                     if reply.get("error"):
                         raise RuntimeError(reply["error"])
+                    feedback = reply.get("gesture", {})
+                    control.publish(gesture=feedback)
+                    for hand in feedback.get("hands", []):
+                        point = (int(hand["x"] * w), int(hand["y"] * h))
+                        color = (0, 255, 0) if hand["in_zone"] else (0, 160, 255)
+                        cv2.circle(frame, point, 8, color, 2)
+                        cv2.putText(frame, f'{hand["label"]} {hand["score"]:.2f}', point,
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
                     if reply.get("command"):
                         control.submit(reply["command"])
                 except Exception:
@@ -1016,14 +1486,27 @@ def run(args):
                         pull_warned = True
 
             motion_blocker = None
-            if control.frozen:
+            if control.deactivated:
+                motion_blocker = "deactivated"
+            elif enrolling or control.enrollment.busy:
+                motion_blocker = "face enrollment"
+            elif control.frozen:
                 motion_blocker = "frozen"
             elif not held:
                 motion_blocker = "phone released"
+            elif target is None and voice_on and time.time() - voice_seen > 0.7:
+                motion_blocker = f"searching for {args.voice}"
             elif target is None:
                 motion_blocker = "target unavailable"
             elif freeze:
                 motion_blocker = "pull detected"
+            if robot and motion_blocker == f"searching for {args.voice}":
+                new = pan_goal + search_dir * args.search_speed * min(dt, 0.1)
+                if not pan_home - args.pan_limit <= new <= pan_home + args.pan_limit:
+                    search_dir = -search_dir  # sweep back the other way at the pan limit
+                    new = float(np.clip(new, pan_home - args.pan_limit, pan_home + args.pan_limit))
+                pan_goal = float(new)
+                robot.send_action({f"{PAN}.pos": pan_goal})
             if robot and motion_blocker is None:
                 action = {}
                 if abs(ex) > args.deadband:
@@ -1039,16 +1522,36 @@ def run(args):
                     # Wrist does the fast aiming. Whenever it's tilted, move the whole phone in that direction
                     # (keeping its angle) so the wrist can relax back toward level: phone ends up at eye level.
                     tilt_offset = float(np.clip(tilt_offset + tilt_step, -args.tilt_limit, args.tilt_limit))
-                    looking_down = tilt_offset * args.tilt_sign
+                    # Absolute camera pitch includes the starting arm pose. A centered face
+                    # while looking upward still means the phone needs to rise.
+                    camera_pitch = hik.camera_pitch(tilt_offset, args.camera_pitch_offset) if args.height else 0.0
                     z_new = z_goal
-                    if args.height and abs(looking_down) > 2.0:
-                        dz = float(np.clip(-args.height_rate * looking_down, -0.004, 0.004))
+                    if args.height and abs(camera_pitch) > 2.0:
+                        dz = float(np.clip(args.height_rate * camera_pitch, -0.004, 0.004))
                         z_new = float(np.clip(z_goal + dz, hik.z0 - args.height_down, hik.z0 + args.height_up))
                     reach_new = control.propose_reach(dt)
                     if z_new != z_goal or reach_new != control.reach:
                         q, pos_err, ang_err = hik.solve(z_new, reach_new)
-                        jump = float(np.abs(q - hik.q)[1:4].max())
-                        if np.isfinite(q).all() and pos_err < 0.01 and ang_err < 5 and jump < MAX_IK_JUMP_DEG:
+                        if not valid_ik(hik, q, pos_err, ang_err) and z_new != z_goal:
+                            # Depth must not prevent a feasible height correction. First hold
+                            # reach; if needed, retract slightly within the configured bound.
+                            reach_new = control.reach
+                            q, pos_err, ang_err = hik.solve(z_new, reach_new)
+                            if not valid_ik(hik, q, pos_err, ang_err):
+                                retreat = min(0.004, args.depth_rate * max(0.0, min(dt, 0.1)))
+                                reach_new = max(control.reach0 - args.depth_back, control.reach - retreat)
+                                q, pos_err, ang_err = hik.solve(z_new, reach_new)
+                        if not valid_ik(hik, q, pos_err, ang_err) and z_new != z_goal:
+                            # Near a folded pose, even 4 mm can exceed the joint-step
+                            # limit. Try smaller lifts without changing that limit.
+                            dz = z_new - z_goal
+                            reach_new = control.reach
+                            for scale in (0.5, 0.25, 0.125):
+                                z_new = z_goal + dz * scale
+                                q, pos_err, ang_err = hik.solve(z_new, reach_new)
+                                if valid_ik(hik, q, pos_err, ang_err):
+                                    break
+                        if valid_ik(hik, q, pos_err, ang_err):
                             hik.q, z_goal, control.reach = q, z_new, reach_new
                         else:
                             motion_blocker = "IK rejected"
@@ -1062,8 +1565,13 @@ def run(args):
                 if action:
                     robot.send_action(action)
 
-            control.publish(mode="frozen" if control.frozen else ("tracking" if held else "released"),
-                held=held, target_visible=target is not None, motion_blocker=motion_blocker)
+            control.publish(mode="deactivated" if control.deactivated else
+                            "frozen" if control.frozen else ("tracking" if held else "released"),
+                held=held, target_visible=target is not None, motion_blocker=motion_blocker,
+                height_enabled=args.height, height=z_goal if hik else None,
+                camera_pitch=hik.camera_pitch(tilt_offset, args.camera_pitch_offset) if hik and args.height else None,
+                at_height_limit=bool(hik and args.height and (
+                    z_goal >= hik.z0 + args.height_up - 1e-6 or z_goal <= hik.z0 - args.height_down + 1e-6)))
             frames += 1
             if time.time() - t_fps >= 1.0:
                 elapsed = time.time() - t_fps
@@ -1080,14 +1588,27 @@ def run(args):
                 log.info(f"camera {cam_fps:4.1f} fps, processed {fps:4.1f} fps | {len(boxes)} detections | err x={ex:+.2f} y={ey:+.2f}{pose}")
 
             if preview:
-                mode = "FROZEN" if control.frozen else ("DRY RUN" if not robot else ("TRACKING" if held else "RELEASED"))
+                mode = "DEACTIVATED" if control.deactivated else "FROZEN" if control.frozen else ("DRY RUN" if not robot else ("TRACKING" if held else "RELEASED"))
                 seen = target[4] if target is not None else "searching"
                 status = f"{mode} | {seen} | ex={ex:+.2f} | cam {cam_fps:.0f} / proc {fps:.0f} fps"
                 if control.depth:
                     status += f" | range {control.depth.distance:.2f}m" if control.depth.distance is not None else " | depth HOLD"
-                preview.show(annotate(frame, boxes, target, smoothed, args.deadband, status))
+                if gestures:
+                    pending = feedback.get("pending")
+                    status += f" | {pending[0]} {pending[1]:.0%}" if pending else (
+                        " | hand detected" if feedback.get("hands") else " | no hands")
+                if enrolling:
+                    enrollment = control.enrollment.snapshot()
+                    status = f'ENROLLING {enrollment["name"]}: {enrollment["samples"]}/{enrollment["total"]}'
+                preview.show(annotate(frame, boxes, target, smoothed, args.deadband, status, face_labels))
     finally:
         control.publish(mode="stopped")
+        if voice_listener:
+            voice_listener.terminate()
+            try:
+                voice_listener.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                voice_listener.kill()
         if gestures:
             gestures.close()
         if preview:
@@ -1107,6 +1628,19 @@ def main():
                    help="manual exposure in 0.1 ms units (e.g. 300 for 30 fps in a dim room); default = camera auto")
     p.add_argument("--detector", default="auto", choices=["auto", "face+body", "yolo", "haar"],
                    help="auto = face+body if both models are in tracker/models/, else Haar/HOG")
+    p.add_argument("--follow-face", help="follow only this enrolled name using YuNet + SFace")
+    p.add_argument("--face-db", default=os.path.join(MODELS_DIR, "faces.npz"), help="enrolled face database")
+    p.add_argument("--face-threshold", type=float, default=0.45, help="minimum face cosine similarity")
+    p.add_argument("--voice", metavar="NAME",
+                   help="listen all the time; while NAME's voice is heard, follow NAME's enrolled face and "
+                        "sweep the base to find them if they're out of view")
+    p.add_argument("--voice-python", default="/home/aup/miniforge3/envs/speakerid/bin/python",
+                   help="Python of the speaker-ID environment (acoustic/README.md)")
+    p.add_argument("--voice-local-mic", type=int, metavar="DEVICE",
+                   help="use this microphone on the tracker machine instead of the forwarded laptop mic")
+    p.add_argument("--voice-hold", type=float, default=4.0,
+                   help="keep looking for NAME this many seconds after their voice was last identified")
+    p.add_argument("--search-speed", type=float, default=15.0, help="degrees per second while sweeping to find NAME")
     p.add_argument("--port", help="follower arm serial port; auto-detected if omitted")
     p.add_argument("--dry-run", action="store_true", help="camera + detection only, never touch the motors")
     p.add_argument("--test-pan", action="store_true", help="move the base 10 deg and back to check direction")
@@ -1128,6 +1662,8 @@ def main():
     p.add_argument("--depth-back", type=float, default=0.05, help="max metres to retract from starting reach")
     p.add_argument("--depth-rate", type=float, default=0.02, help="max reach speed in metres per second")
     p.add_argument("--urdf", default=DEFAULT_URDF, help="SO-101 URDF used for IK")
+    p.add_argument("--camera-pitch-offset", type=float, default=0.0,
+                   help="camera mounting pitch relative to gripper forward axis, degrees (positive = up)")
     p.add_argument("--height-up", type=float, default=0.15, help="max metres the phone may rise from the start pose")
     p.add_argument("--height-down", type=float, default=0.10, help="max metres the phone may drop from the start pose")
     p.add_argument("--height-rate", type=float, default=0.0005,
@@ -1145,6 +1681,10 @@ def main():
     p.add_argument("--contact-load", type=float, default=80.0,
                    help="stop squeezing once the gripper feels this much push-back (of 1000)")
     p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
+    p.add_argument("--grip-move-torque", type=float, default=50.0,
+                   help="gripper force while opening, %% of max (50 = LeRobot's cap); closing and holding use --grip-torque")
+    p.add_argument("--test-motion-scale", type=float, default=1.0,
+                   help="test_motion command: size of the moves relative to TEST_MOTION_DEG (0-1.5)")
     p.add_argument("--release-on-pull", action="store_true",
                    help="let go of the phone when someone close by grabs and tugs it")
     p.add_argument("--pull-threshold", type=float, default=250.0,
@@ -1160,6 +1700,9 @@ def main():
     p.add_argument("--max-step", type=float, default=3.0, help="max degrees per frame")
     p.add_argument("--hfov", type=float, default=60.0, help="camera horizontal field of view in degrees")
     p.add_argument("--pan-limit", type=float, default=90.0, help="max degrees left/right of the start pose")
+    p.add_argument("--dpad-pan-step", type=float, default=8.0, help="D-pad left/right: degrees per press")
+    p.add_argument("--dpad-height-step", type=float, default=0.015, help="D-pad up/down: metres per press (height IK)")
+    p.add_argument("--dpad-tilt-step", type=float, default=5.0, help="D-pad up/down without height IK: wrist degrees")
     p.add_argument("--tilt-limit", type=float, default=25.0, help="max degrees up/down of the start pose")
     p.add_argument("--smoothing", type=float, default=0.5, help="0 = raw detections, closer to 1 = smoother")
     p.add_argument("--lost-timeout", type=float, default=2.0, help="seconds before forgetting a lost person")
@@ -1167,6 +1710,8 @@ def main():
     p.add_argument("--max-seconds", type=float, help="stop automatically after this long")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args()
+    if not -1 <= args.face_threshold <= 1:
+        p.error("--face-threshold must be between -1 and 1")
 
     for name in ("gesture_step", "depth_rate"):
         value = getattr(args, name)
@@ -1185,6 +1730,8 @@ def main():
             p.error("--smoothing must be between 0 (inclusive) and 1 (exclusive) for depth following")
         if args.detector == "yolo":
             p.error("--distance requires frontal-face detection")
+    if not np.isfinite(args.camera_pitch_offset):
+        p.error("--camera-pitch-offset must be finite")
     if not 0 <= args.preview_port <= 65535:
         p.error("--preview-port must be between 0 and 65535")
 

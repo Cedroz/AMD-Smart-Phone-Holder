@@ -1,5 +1,29 @@
 # Named face recognition
 
+## Enroll from the camera preview
+
+Open `http://<arm-ip>:8000/` while `tracker/track.py` is running. Under the
+camera feed, enter a name and click **Enroll face**. The page confirms when
+enrollment starts, displays progress out of 20 samples, and shows **Done! Saved
+<name>** after writing the database. Keep only that person in view and slowly
+vary their head angle. Click **Cancel enrollment** to discard partial samples.
+
+Enrollment shares the tracker's camera and temporarily pauses tracking motion.
+The page explains when no face or multiple faces are visible, and reports
+timeouts or model/save failures. Saved enrollment remains available after restart.
+Once enrollment finishes, recognized faces are labeled with their enrolled names
+in the camera overlay automatically. Saved names also load after restarting the
+preview. Faces below the recognition threshold retain their normal detection
+labels; names are displayed only while a recognizable face is visible.
+Normal tracking resumes after enrollment unless Freeze or Deactivate is enabled.
+Enrollment alone does not switch the tracker to following a named person;
+`--follow-face NAME` selects that mode when launching the tracker.
+
+After updating the code, restart the tracker once so the new page and endpoints
+are loaded. No separate enrollment process is needed.
+
+## Command-line use
+
 `track.py` locates people; `faces.py` adds identity recognition using the same
 robot-mounted camera. It uses OpenCV YuNet for face boxes and landmarks, and
 SFace for aligned 128-dimensional face features. Enrollment stores labeled
@@ -82,6 +106,21 @@ the starting reach, and a maximum reach speed of 2 cm/s. Add `--height` to follo
 vertical position as well.
 The IK model must match the arm, as for the existing height mode.
 
+Use `--height` for physical vertical following (`--tilt` alone only aims the
+wrist). Height follows the modeled camera's absolute pitch, including the
+starting pose: an upward-facing phone rises even when the detected face is
+already centered. The gripper frame's +Z axis is treated as camera forward;
+use `--camera-pitch-offset DEGREES` for a mounting angle difference (positive
+means the camera points farther up). Check the model against the actual mount.
+Height corrections take priority over an incompatible depth request; reach
+can retract slowly within `--depth-back` to make room. The existing height
+and reach bounds, IK checks, freeze, and dry-run behavior still apply.
+`/status` reports `height_enabled`, `height`, `camera_pitch`, and
+`at_height_limit`. A low starting pose can rise only by `--height-up` (default
+15 cm), so reaching a standing person's eye height may remain outside the
+arm's workspace.
+
+
 Distance uses `reference_distance * reference_face_width / current_face_width`.
 Face angle and detector box variation affect accuracy; this is not a precise
 range sensor. Missing, profile, body, and horizontally cropped detections hold
@@ -116,6 +155,14 @@ and manifest in `models/gestures`; the local `followme` package must be installe
 in that environment, as in the existing vision setup. MediaPipe is not imported
 into the motor process. The worker uses a larger vertical gesture zone to allow
 the fingers-down farther gesture below the face.
+
+The preview marks detected hands green inside the gesture zone and orange
+outside it, with labels and confidence. The status line shows held-command
+progress or `no hands`; `/status` includes the same gesture feedback plus finger
+direction and openness. Freeze/resume require a held gesture (default 0.7 s);
+closer/farther start after two open/curl/open cycles. Release a held gesture
+before repeating it. A held thumbs-up remains available during curling.
+`--dry-run` recognizes commands and updates status but never moves the arm.
 
 All gesture, HTTP, and terminal commands enter the same bounded queue and are
 applied by the tracking loop. Type a command name and ENTER in an interactive

@@ -190,6 +190,21 @@ class BeckonTests(unittest.TestCase):
         commands = [c for c in (pipeline.update(h, self._tick(), FACE) for h in self.beckon(8)) if c]
         self.assertEqual(set(commands), {CLOSER})
 
+    def test_resume_is_not_suppressed_by_another_hand_curling(self):
+        pipeline = GesturePipeline()
+        commands = []
+        for index in range(100):
+            openness = 2. if index % 8 < 4 else 1.
+            hands = [HandObservation('Open_Palm' if openness == 2 else 'None',
+                                     .99, .5, .4, openness, 'up')]
+            if index >= 20:
+                hands.append(thumb(x=.55))
+            command = pipeline.update(hands, index * .05, FACE)
+            if command:
+                commands.append(command)
+        self.assertEqual(commands.count(RESUME), 1)
+        self.assertNotIn(FREEZE, commands)
+
     def test_pipeline_still_freezes_and_resumes(self):
         pipeline = GesturePipeline()
         frames = [[palm()]] * 20 + [[]] * 10 + [[thumb()]] * 30
@@ -199,6 +214,27 @@ class BeckonTests(unittest.TestCase):
     def _tick(self):
         self.clock.advance()
         return self.clock()
+
+
+class RecognizerLandmarkTests(unittest.TestCase):
+    def test_unclassified_hands_keep_their_motion_landmarks(self):
+        import numpy as np
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from followme.gestures.recognizer import MediaPipeGestureRecognizer
+        recognizer = MediaPipeGestureRecognizer.__new__(MediaPipeGestureRecognizer)
+        recognizer._mp = SimpleNamespace(Image=Mock(), ImageFormat=SimpleNamespace(SRGB=0))
+        recognizer._recognizer = Mock()
+        landmarks = [SimpleNamespace(x=x, y=y) for x, y in flat_hand()]
+        for categories in ([[]], []):
+            with self.subTest(categories=categories):
+                recognizer._recognizer.recognize_for_video.return_value = SimpleNamespace(
+                    gestures=categories, hand_landmarks=[landmarks])
+                hands = recognizer.recognize(np.zeros((480, 640, 3), np.uint8), 0)
+                self.assertEqual(len(hands), 1)
+                self.assertEqual(hands[0].label, 'None')
+                self.assertEqual(hands[0].fingers, 'up')
+                self.assertGreater(hands[0].openness, 1.6)
 
 
 @unittest.skipUnless(importlib.util.find_spec('mediapipe') and MODEL.is_file(), 'needs the vision environment and model')

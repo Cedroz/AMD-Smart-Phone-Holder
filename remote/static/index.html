@@ -18,6 +18,7 @@
     --muted: #6b7280;
     --border: #dfe2e8;
     --ok: #16a34a;
+    --ok-soft: #dcf5e4;
     --bad: #dc2626;
     --ambient: #2563eb;
     --ambient-soft: #dbe6fd;
@@ -37,6 +38,7 @@
       --muted: #9aa1ad;
       --border: #2a2f38;
       --ok: #22c55e;
+      --ok-soft: #12301d;
       --bad: #f87171;
       --ambient: #4f8cff;
       --ambient-soft: #1a2640;
@@ -56,6 +58,7 @@
     --muted: #9aa1ad;
     --border: #2a2f38;
     --ok: #22c55e;
+    --ok-soft: #12301d;
     --bad: #f87171;
     --ambient: #4f8cff;
     --ambient-soft: #1a2640;
@@ -118,6 +121,14 @@
   .status[data-mode="ambient"] .badge { background: var(--ambient-soft); color: var(--ambient); }
   .status[data-mode="spotlight"] .badge { background: var(--spot-soft); color: var(--spot); }
   .status[data-mode="deactivate"] .badge { background: var(--off-soft); color: var(--off); }
+  .status[data-mode="active"] .badge { background: var(--ok-soft); color: var(--ok); }
+
+  .status .phone { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .status .phone .dot { width: 7px; height: 7px; }
+  .status .phone.held { color: var(--ok); }
+  .status .phone.held .dot { background: var(--ok); }
+  .status .voice.on { color: var(--ambient); }
+  .status .voice.on .dot { background: var(--ambient); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ambient) 25%, transparent); }
 
   .spacer { flex: 1; }
 
@@ -173,8 +184,73 @@
   }
   .btn-off svg { width: 22px; height: 22px; }
   .btn-off:active { transform: scale(.98); }
-  .btn-off.active { background: var(--surface); color: var(--muted); border-color: var(--border); }
+  .btn-off.activate { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
+  .btn-off.confirm { background: var(--ok); color: var(--on-accent); border-color: var(--ok); }
+  body.deactivated .modes { opacity: .45; }
   .btn-off:focus-visible { outline: 3px solid var(--off); outline-offset: 2px; }
+
+  .phone-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn-phone {
+    position: relative;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    min-height: 60px; padding: 0 14px; border-radius: 18px;
+    font-size: 16px; font-weight: 700;
+    background: var(--surface); border: 1.5px solid var(--border); box-shadow: var(--shadow);
+    transition: transform .08s ease, background .2s, border-color .2s, color .2s;
+  }
+  .btn-phone svg { width: 24px; height: 24px; flex: none; }
+  .btn-phone:active { transform: scale(.97); }
+  .btn-phone:focus-visible { outline: 3px solid var(--ambient); outline-offset: 2px; }
+  .btn-phone[data-action="grip"].on { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+  .btn-phone[data-action="release"].on { background: var(--surface-2); color: var(--muted); }
+  .btn-phone.confirm { background: var(--off); border-color: var(--off); color: var(--on-accent); }
+  .btn-phone .spinner { right: 14px; }
+  .btn-phone.pending::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: color-mix(in srgb, var(--bg) 35%, transparent);
+  }
+
+  .btn-test {
+    position: relative; width: 100%;
+    display: flex; align-items: center; gap: 14px; text-align: left;
+    min-height: 64px; padding: 10px 16px; border-radius: 18px;
+    background: var(--surface); border: 1.5px dashed var(--border);
+    transition: transform .08s ease, background .2s, border-color .2s, color .2s;
+  }
+  .btn-test svg { width: 24px; height: 24px; flex: none; color: var(--ambient); }
+  .btn-test .name { display: block; font-size: 16px; font-weight: 700; }
+  .btn-test .hint { display: block; font-size: 13px; color: var(--muted); }
+  .btn-test:active { transform: scale(.98); }
+  .btn-test:focus-visible { outline: 3px solid var(--ambient); outline-offset: 2px; }
+  .btn-test.offline { opacity: .55; }
+  .btn-test.confirm { background: var(--off); border: 1.5px solid var(--off); color: var(--on-accent); }
+  .btn-test.confirm svg, .btn-test.confirm .hint { color: var(--on-accent); }
+  .btn-test.running { border: 1.5px solid var(--ambient); background: var(--ambient-soft); }
+  .btn-test.running svg { animation: spin 1.2s linear infinite; }
+
+  .move { display: flex; align-items: center; gap: 16px; }
+  .dpad {
+    display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 6px;
+    flex: none; touch-action: none;
+  }
+  .dpad button {
+    display: grid; place-items: center; border-radius: 16px;
+    background: var(--surface); border: 1.5px solid var(--border); box-shadow: var(--shadow); color: var(--text);
+    transition: transform .06s ease, background .15s, border-color .15s, color .15s;
+  }
+  .dpad button svg { width: 26px; height: 26px; }
+  .dpad button.held { transform: scale(.94); background: var(--ambient-soft); border-color: var(--ambient); color: var(--ambient); }
+  .dpad button:focus-visible { outline: 3px solid var(--ambient); outline-offset: 2px; }
+  .dpad [data-dir="up"] { grid-area: 1 / 2; }
+  .dpad [data-dir="left"] { grid-area: 2 / 1; }
+  .dpad [data-dir="right"] { grid-area: 2 / 3; }
+  .dpad [data-dir="down"] { grid-area: 3 / 2; }
+  .dpad .center { grid-area: 2 / 2; border-radius: 50%; color: var(--muted); background: var(--surface-2); box-shadow: none; }
+  .dpad .center svg { width: 22px; height: 22px; }
+  .dpad .center.resume { background: var(--ambient); border-color: var(--ambient); color: var(--on-accent); }
+  .move-info .name { display: block; font-size: 16px; font-weight: 700; }
+  .move-info .hint { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .move.disabled .dpad { opacity: .45; }
 
   .busy { pointer-events: none; }
   .btn.pending::after, .btn-off.pending::after {
@@ -222,6 +298,8 @@
     <div>
       <div class="label">Current mode</div>
       <div class="mode" id="statusMode">—</div>
+      <div class="phone" id="phoneState"><span class="dot"></span><span id="phoneText">Phone —</span></div>
+      <div class="phone voice" id="voiceState" hidden><span class="dot"></span><span id="voiceText"></span></div>
     </div>
   </section>
 
@@ -247,7 +325,38 @@
     </button>
   </section>
 
-  <button class="btn-off" data-mode="deactivate" aria-pressed="false">
+  <div class="section-title">Phone</div>
+  <section class="phone-row">
+    <button class="btn-phone" data-action="release" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="4" width="6" height="16" rx="1.5"/><path d="M6 12H2m2-2-2 2 2 2M18 12h4m-2-2 2 2-2 2"/></svg>
+      <span class="label">Release</span>
+      <span class="spinner" aria-hidden="true"></span>
+    </button>
+    <button class="btn-phone" data-action="grip" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="4" width="6" height="16" rx="1.5"/><path d="M2 12h4m-2-2 2 2-2 2M22 12h-4m2-2-2 2 2 2"/></svg>
+      <span class="label">Grip</span>
+      <span class="spinner" aria-hidden="true"></span>
+    </button>
+  </section>
+
+  <div class="section-title">Move</div>
+  <section class="move" id="move">
+    <div class="dpad" role="group" aria-label="Move the arm">
+      <button data-dir="up" aria-label="Up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+      <button data-dir="left" aria-label="Left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="center" id="resumeBtn" aria-label="Resume tracking"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/></svg></button>
+      <button data-dir="right" aria-label="Right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button data-dir="down" aria-label="Down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+    </div>
+    <div class="move-info"><span class="name" id="moveName">Tracking</span><span class="hint" id="moveHint">Press an arrow to steer by hand</span></div>
+  </section>
+
+  <button class="btn-test offline" id="testBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+    <span><span class="name" id="testName">Motor test</span><span class="hint" id="testHint">Checking tracker…</span></span>
+  </button>
+
+  <button class="btn-off" id="masterBtn" aria-pressed="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
     <span id="offLabel">Deactivate</span>
     <span class="spinner" aria-hidden="true"></span>
@@ -262,12 +371,11 @@
   const MODES = {
     ambient: { name: "Ambient" },
     spotlight: { name: "Spotlight" },
-    deactivate: { name: "Deactivated" },
   };
   const ICONS = {
     ambient: document.querySelector('.btn[data-mode="ambient"] .icon').innerHTML,
     spotlight: document.querySelector('.btn[data-mode="spotlight"] .icon').innerHTML,
-    deactivate: document.querySelector('.btn-off svg').outerHTML,
+    deactivated: document.querySelector('.btn-off svg').outerHTML,
   };
 
   const buttons = [...document.querySelectorAll("[data-mode]")].filter(el => el.tagName === "BUTTON");
@@ -277,9 +385,19 @@
   const toast = document.getElementById("toast");
   document.getElementById("host").textContent = location.host;
 
+  const phoneButtons = [...document.querySelectorAll(".btn-phone")];
   let currentMode = null;
+  let held = null;
+  let confirmTimer;
+  let tracker = { reachable: false };
+  let testUntil = 0;
+  let testConfirmTimer;
+  const testBtn = document.getElementById("testBtn");
   let busy = false;
   let toastTimer;
+  let deactivated = null;
+  let masterConfirmTimer;
+  const masterBtn = document.getElementById("masterBtn");
 
   function showToast(message) {
     toast.textContent = message;
@@ -296,14 +414,221 @@
 
   function render(mode) {
     currentMode = mode;
-    statusBox.dataset.mode = mode || "";
-    document.getElementById("statusMode").textContent = mode ? MODES[mode].name : "—";
-    document.getElementById("statusIcon").innerHTML = mode ? ICONS[mode] : "";
-    document.getElementById("offLabel").textContent = mode === "deactivate" ? "Deactivated" : "Deactivate";
+    renderStatus();
     for (const b of buttons) {
       const on = b.dataset.mode === mode;
       b.classList.toggle("active", on);
       b.setAttribute("aria-pressed", String(on));
+    }
+  }
+
+  function renderStatus() {
+    const off = deactivated === true;
+    statusBox.dataset.mode = off ? "deactivate" : currentMode || (deactivated === false ? "active" : "");
+    document.getElementById("statusMode").textContent =
+      off ? "Deactivated" : currentMode ? MODES[currentMode].name : deactivated === false ? "Active" : "—";
+    document.getElementById("statusIcon").innerHTML =
+      currentMode && !off ? ICONS[currentMode] : deactivated === null ? "" : ICONS.deactivated;
+  }
+
+  function renderMaster(isDeactivated) {
+    deactivated = isDeactivated;
+    document.body.classList.toggle("deactivated", isDeactivated === true);
+    if (!masterBtn.classList.contains("confirm")) {
+      masterBtn.classList.toggle("activate", isDeactivated === true);
+      document.getElementById("offLabel").textContent = isDeactivated ? "Activate" : "Deactivate";
+    }
+    masterBtn.setAttribute("aria-pressed", String(isDeactivated === true));
+    renderStatus();
+    renderTest();
+    renderMove();
+  }
+
+  function clearMasterConfirm() {
+    clearTimeout(masterConfirmTimer);
+    masterBtn.classList.remove("confirm");
+    renderMaster(deactivated);
+  }
+
+  async function sendMaster() {
+    const activate = deactivated === true;
+    // Deactivating is immediate and overrides anything in progress; activating restarts motion, so confirm.
+    if (activate && !masterBtn.classList.contains("confirm")) {
+      navigator.vibrate?.(12);
+      masterBtn.classList.remove("activate");
+      masterBtn.classList.add("confirm");
+      document.getElementById("offLabel").textContent = "Tap again to activate";
+      masterConfirmTimer = setTimeout(clearMasterConfirm, 3000);
+      return;
+    }
+    if (activate && busy) return;
+    clearTimeout(masterConfirmTimer);
+    masterBtn.classList.remove("confirm");
+    navigator.vibrate?.(activate ? 12 : [30, 30, 30]);
+    masterBtn.classList.add("pending");
+    try {
+      const data = await request("/api/active", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: activate }),
+      });
+      setConnected(true);
+      if (!activate) testUntil = 0;
+      renderMaster(data.deactivated);
+    } catch (err) {
+      showToast(err.name === "AbortError" ? "No response from the arm controller"
+        : `Couldn't ${activate ? "activate" : "deactivate"}: ${err.message}`);
+      renderMaster(deactivated);
+    } finally {
+      masterBtn.classList.remove("pending");
+    }
+  }
+
+  function renderPhone(isHeld) {
+    held = isHeld;
+    const line = document.getElementById("phoneState");
+    line.classList.toggle("held", isHeld === true);
+    document.getElementById("phoneText").textContent =
+      isHeld === null ? "Phone —" : isHeld ? "Phone held" : "Phone released";
+    for (const b of phoneButtons) {
+      const on = (b.dataset.action === "grip") === isHeld;
+      b.classList.toggle("on", isHeld !== null && on);
+      b.setAttribute("aria-pressed", String(isHeld !== null && on));
+    }
+  }
+
+  function clearConfirm() {
+    clearTimeout(confirmTimer);
+    const b = document.querySelector('.btn-phone[data-action="release"]');
+    b.classList.remove("confirm");
+    b.querySelector(".label").textContent = "Release";
+  }
+
+  const moveBox = document.getElementById("move");
+  const resumeBtn = document.getElementById("resumeBtn");
+  let manual = false;
+  let moveInFlight = false;
+  let repeatTimer = null;
+
+  function renderVoice() {
+    const v = tracker.reachable ? tracker.voice : null;
+    const line = document.getElementById("voiceState");
+    line.hidden = !(v && v.target);
+    if (line.hidden) return;
+    const fresh = v.age !== null && v.age <= (v.hold || 4);
+    const hearingTarget = fresh && v.speaker === v.target;
+    line.classList.toggle("on", hearingTarget);
+    let text;
+    if (v.age === null) text = `Listening for ${v.target} · waiting for the microphone`;
+    else if (v.age > 5) text = `Listening for ${v.target} · no audio for ${Math.round(v.age)} s`;
+    else if (hearingTarget) text = (tracker.motion_blocker || "").startsWith("searching")
+      ? `Heard ${v.target} · looking for you` : `Heard ${v.target} · following you`;
+    else if (fresh && v.speaker !== "silence") text = `Listening for ${v.target} · hearing ${v.speaker}`;
+    else text = `Listening for ${v.target}`;
+    document.getElementById("voiceText").textContent = text;
+  }
+
+  function renderMove() {
+    const unavailable = !tracker.reachable || deactivated === true;
+    manual = tracker.frozen === true;
+    moveBox.classList.toggle("disabled", unavailable);
+    resumeBtn.classList.toggle("resume", manual && !unavailable);
+    const name = document.getElementById("moveName");
+    const hint = document.getElementById("moveHint");
+    if (!tracker.reachable) { name.textContent = "Move"; hint.textContent = "Tracker offline"; }
+    else if (deactivated) { name.textContent = "Move"; hint.textContent = "Deactivated — activate to move"; }
+    else if (manual) { name.textContent = "Manual"; hint.textContent = "Tracking paused · tap the centre to resume"; }
+    else { name.textContent = "Tracking"; hint.textContent = "Press an arrow to steer by hand"; }
+  }
+
+  async function sendMove(direction) {
+    if (moveInFlight) return;  // hold-to-repeat never queues up a backlog
+    moveInFlight = true;
+    try {
+      const data = await request("/api/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ direction }),
+      });
+      setConnected(true);
+      tracker.frozen = direction !== "resume";
+      renderMove();
+      return data;
+    } catch (err) {
+      stopRepeat();
+      showToast(err.name === "AbortError" ? "No response from the arm controller" : `Couldn't move: ${err.message}`);
+    } finally {
+      moveInFlight = false;
+    }
+  }
+
+  function stopRepeat() {
+    clearInterval(repeatTimer);
+    repeatTimer = null;
+    document.querySelectorAll(".dpad button.held").forEach(b => b.classList.remove("held"));
+  }
+
+  function startRepeat(button) {
+    if (!tracker.reachable) { showToast("The tracker isn't reachable from the controller"); return; }
+    if (deactivated) { showToast("The arm is deactivated — tap Activate first"); return; }
+    stopRepeat();
+    button.classList.add("held");
+    navigator.vibrate?.(8);
+    sendMove(button.dataset.dir);
+    repeatTimer = setInterval(() => sendMove(button.dataset.dir), 300);
+  }
+
+  function renderTest() {
+    const running = Date.now() < testUntil;
+    if (testBtn.classList.contains("confirm")) return;
+    testBtn.classList.toggle("running", running);
+    testBtn.classList.toggle("offline", (!tracker.reachable || deactivated === true) && !running);
+    const name = document.getElementById("testName");
+    const hint = document.getElementById("testHint");
+    if (running) {
+      name.textContent = "Moving…";
+      hint.textContent = `Sweeping and lifting the arm · ${Math.ceil((testUntil - Date.now()) / 1000)} s`;
+      return;
+    }
+    name.textContent = "Motor test";
+    const last = tracker.last_command;
+    if (!tracker.reachable) hint.textContent = "Tracker offline — start tracker/track.py";
+    else if (deactivated) hint.textContent = "Deactivated — activate to run the test";
+    else if (last && last.command === "test_motion") hint.textContent = `Last test: ${last.result}`;
+    else if (tracker.dry_run) hint.textContent = "Tracker in dry run — motors won't move";
+    else hint.textContent = held === false ? "Arm and gripper for 10 s" : "Arm for 10 s · release the phone to test the gripper";
+  }
+
+  function clearTestConfirm() {
+    clearTimeout(testConfirmTimer);
+    testBtn.classList.remove("confirm");
+    renderTest();
+  }
+
+  async function sendTest() {
+    if (busy || Date.now() < testUntil) return;
+    if (!tracker.reachable) { showToast("The tracker isn't reachable from the controller"); return; }
+    if (deactivated) { showToast("The arm is deactivated — tap Activate first"); return; }
+    if (!testBtn.classList.contains("confirm")) {
+      navigator.vibrate?.(12);
+      testBtn.classList.remove("offline", "running");
+      testBtn.classList.add("confirm");
+      document.getElementById("testName").textContent = "Tap again to move the arm";
+      document.getElementById("testHint").textContent = "Keep hands clear";
+      testConfirmTimer = setTimeout(clearTestConfirm, 3000);
+      return;
+    }
+    clearTestConfirm();
+    busy = true;
+    navigator.vibrate?.([20, 40, 20]);
+    try {
+      await request("/api/test-motion", { method: "POST" });
+      testUntil = Date.now() + 11500;  // 10 s of motion + easing back
+      renderTest();
+    } catch (err) {
+      showToast(err.name === "AbortError" ? "No response from the arm controller" : `Test failed: ${err.message}`);
+    } finally {
+      busy = false;
     }
   }
 
@@ -325,8 +650,18 @@
       const data = await request("/api/status");
       setConnected(true);
       if (!busy && data.mode !== currentMode) render(data.mode);
+      if (!busy && data.held !== held) renderPhone(data.held);
+      tracker = data.tracker || { reachable: false };
+      if (data.deactivated !== deactivated) renderMaster(data.deactivated);
+      renderMove();
+      renderVoice();
+      renderTest();
     } catch {
       setConnected(false);
+      tracker = { reachable: false };
+      renderTest();
+      renderMove();
+      renderVoice();
     }
   }
 
@@ -354,7 +689,56 @@
     }
   }
 
+  async function sendGripper(action, button) {
+    if (busy) return;
+    if ((action === "grip") === held) return;
+    // Releasing drops the phone: ask for a second tap within 3 s.
+    if (action === "release" && !button.classList.contains("confirm")) {
+      navigator.vibrate?.(12);
+      button.classList.add("confirm");
+      button.querySelector(".label").textContent = "Tap again";
+      confirmTimer = setTimeout(clearConfirm, 3000);
+      return;
+    }
+    clearConfirm();
+    busy = true;
+    navigator.vibrate?.(action === "release" ? [20, 40, 20] : 12);
+    document.body.classList.add("busy");
+    button.classList.add("pending");
+    try {
+      const data = await request("/api/gripper", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      setConnected(true);
+      renderPhone(data.held);
+    } catch (err) {
+      setConnected(false);
+      showToast(err.name === "AbortError" ? "No response from the arm controller" : `Couldn't ${action}: ${err.message}`);
+    } finally {
+      busy = false;
+      button.classList.remove("pending");
+      document.body.classList.remove("busy");
+    }
+  }
+
   for (const b of buttons) b.addEventListener("click", () => sendMode(b.dataset.mode, b));
+  for (const b of phoneButtons) b.addEventListener("click", () => sendGripper(b.dataset.action, b));
+  testBtn.addEventListener("click", sendTest);
+  masterBtn.addEventListener("click", sendMaster);
+  for (const b of document.querySelectorAll(".dpad [data-dir]")) {
+    b.addEventListener("pointerdown", e => { e.preventDefault(); b.setPointerCapture?.(e.pointerId); startRepeat(b); });
+    for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) b.addEventListener(ev, stopRepeat);
+    b.addEventListener("contextmenu", e => e.preventDefault());  // long-press menu on phones
+  }
+  resumeBtn.addEventListener("click", () => {
+    if (!manual || deactivated) return;
+    navigator.vibrate?.(12);
+    sendMove("resume");
+  });
+  window.addEventListener("blur", stopRepeat);
+  setInterval(() => { if (Date.now() < testUntil + 1000) renderTest(); }, 500);
 
   poll();
   setInterval(poll, 2000);

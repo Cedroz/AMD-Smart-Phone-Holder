@@ -68,7 +68,8 @@ class DepthTests(unittest.TestCase):
                 args = self.args('--tilt', '--preview-port', '0', '--port', 'fake')
                 args.height = height
                 robot = Mock()
-                hik = SimpleNamespace(z0=.2, reach0=.3, q=np.zeros(5))
+                hik = SimpleNamespace(z0=.2, reach0=.3, q=np.zeros(5),
+                                      camera_pitch=lambda offset, mounting: -offset + mounting)
                 solutions = []
                 def solve(z, reach):
                     solutions.append((z, reach))
@@ -108,6 +109,84 @@ class DepthTests(unittest.TestCase):
                 self.assertTrue(all(action['wrist_flex.pos'] > 0 for action in actions))
                 self.assertEqual(actions[-1]['shoulder_lift.pos'], 2 if accepted else 0)
                 robot.disconnect.assert_called_once()
+
+    def test_camera_pitch_includes_start_pose_and_mounting_offset(self):
+        hik = track.HeightIK.__new__(track.HeightIK)
+        hik.q = np.zeros(5)
+        pose = np.eye(4)
+        pose[:3, 2] = [np.cos(np.radians(30)), 0, np.sin(np.radians(30))]
+        hik.kin = Mock()
+        hik.kin.forward_kinematics.return_value = pose
+        self.assertAlmostEqual(hik.camera_pitch(10, 5), 35)
+        self.assertEqual(hik.kin.forward_kinematics.call_args.args[0][3], 10)
+        self.assertEqual(hik.q[3], 0)
+
+    def test_low_start_raises_with_centered_face_and_height_has_priority(self):
+        for mode in ('height', 'depth', 'retract', 'small_step', 'limit', 'frozen'):
+            with self.subTest(mode=mode):
+                args = CommandTests().args('--height', '--port', 'fake', '--smoothing', '0')
+                if mode in ('depth', 'retract'):
+                    args.distance, args.distance_reference, args.distance_face_width = 1., 1., 100.
+                if mode == 'limit':
+                    args.height_up = .004
+                control = track.TrackerControl(args)
+                if mode == 'frozen':
+                    control.submit('freeze')
+                hik = SimpleNamespace(z0=.05, reach0=.3, q=np.zeros(5),
+                                      camera_pitch=lambda offset, mounting: 30. + mounting)
+                attempts = []
+                accepted_z = hik.z0
+                def solve(z, reach):
+                    nonlocal accepted_z
+                    attempts.append((z, reach))
+                    error = .02 if mode == 'depth' and reach > .3 else (
+                        .02 if mode == 'retract' and reach >= .3 else 0)
+                    q = hik.q.copy()
+                    step_too_large = mode == 'small_step' and z - accepted_z > .001 + 1e-9
+                    q[1] += 6 if step_too_large else 1
+                    if not step_too_large and error == 0:
+                        accepted_z = z
+                    return q, error, 0
+                hik.solve = solve
+                camera, robot, detector = Mock(), Mock(), Mock()
+                detector.detect.return_value = [(300, 220, 40, 40, 'face')]  # exactly centered
+                frames = iter([np.zeros((480, 640, 3), np.uint8)] * 2)
+                callbacks = []
+                def read(seq):
+                    frame = next(frames, None)
+                    if frame is None:
+                        callbacks[0]()
+                    return seq + 1, frame
+                camera.read.side_effect = read
+                with patch.object(track, 'TrackerControl', return_value=control), \
+                     patch.object(track, 'Camera', return_value=camera), \
+                     patch.object(track, 'connect_arm', return_value=robot), \
+                     patch.object(track, 'read_joints', return_value={j: 0 for j in [*track.ARM_JOINTS, track.GRIP]}), \
+                     patch.object(track, 'HeightIK', return_value=hik), \
+                     patch.object(track, 'FaceAndBodyDetector', return_value=detector), \
+                     patch.object(track.signal, 'signal', side_effect=lambda _, cb: callbacks.append(cb)), \
+                     patch.object(track.time, 'monotonic', side_effect=iter(np.arange(20) * .05)):
+                    track.run(args)
+                status = control.snapshot()
+                if mode == 'frozen':
+                    self.assertEqual(attempts, [])
+                    robot.send_action.assert_not_called()
+                else:
+                    self.assertGreater(status['height'], hik.z0)
+                    self.assertLessEqual(status['height'], hik.z0 + args.height_up)
+                    self.assertTrue(all(z > hik.z0 for z, _ in attempts))
+                    if mode == 'depth':
+                        self.assertEqual(control.reach, .3)  # failed depth must not block height
+                    elif mode == 'retract':
+                        self.assertLess(control.reach, .3)
+                        self.assertGreaterEqual(control.reach, .3 - args.depth_back)
+                    elif mode == 'small_step':
+                        self.assertAlmostEqual(status['height'], hik.z0 + .002)
+                        self.assertEqual(control.reach, .3)
+                        for action in robot.send_action.call_args_list:
+                            self.assertLessEqual(action.args[0]['shoulder_lift.pos'], 2)
+                    elif mode == 'limit':
+                        self.assertTrue(status['at_height_limit'])
 
     def test_invalid_configuration_rejected_before_run(self):
         for extra in (['--distance-reference', 'nan'], ['--distance-face-width', '0'],
@@ -172,6 +251,11 @@ class CommandTests(unittest.TestCase):
             self.assertTrue(control.commands.empty())
             self.assertEqual(client.post('/grip').status_code, 202)
             self.assertEqual(control.commands.get_nowait(), 'grip')
+            for command, expected in (('resume', 0), ('closer', .02), ('farther', 0)):
+                self.assertEqual(client.post('/commands', json={'command': command}).status_code, 202)
+                control.apply(control.commands.get_nowait())
+                control.publish()
+                self.assertAlmostEqual(client.get('/status').json()['requested_reach'], expected)
             for _ in range(32):
                 control.submit('closer')
             self.assertEqual(client.post('/commands', json={'command': 'freeze'}).status_code, 503)
@@ -182,7 +266,8 @@ class CommandTests(unittest.TestCase):
         args = self.args('--gestures', '--tilt', '--port', 'fake', '--smoothing', '0')
         control = track.TrackerControl(args)
         camera, robot, worker = Mock(), Mock(), Mock()
-        hik = SimpleNamespace(z0=.2, reach0=.3, q=np.zeros(5))
+        hik = SimpleNamespace(z0=.2, reach0=.3, q=np.zeros(5),
+                                      camera_pitch=lambda offset, mounting: -offset + mounting)
         hik.solve = Mock(return_value=(np.ones(5), 0, 0))
         worker.infer.side_effect = [{'command': c, 'error': None}
                                    for c in ('freeze', None, 'resume', 'closer', None)]
