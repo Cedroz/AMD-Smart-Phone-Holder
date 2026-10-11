@@ -686,21 +686,24 @@ def raise_arm(robot, args):
 # --------------------------------------------------------------------------- main loop
 
 
-# (joint, amplitude deg, base frequency Hz, phase): different rhythms per joint so it looks wild.
+# (joint, swing deg each side, seconds per swing at speed 1). Each joint is flung to one end, then the
+# other: smooth sine waves turned out faster than the servos can follow, so they only wiggled a little.
+# Driving straight at each end makes them move at their real top speed and reach the full swing.
+# Different timings per joint so it looks wild rather than robotic.
 PARTY_MOVES = [
-    ("shoulder_pan", 30.0, 1.0, 0.0),
-    ("wrist_flex", 20.0, 1.7, 1.0),
-    ("wrist_roll", 45.0, 1.3, 2.0),
-    ("elbow_flex", 8.0, 0.8, 0.5),
-    ("shoulder_lift", 5.0, 0.6, 1.5),
+    ("shoulder_pan", 30.0, 0.35),
+    ("wrist_flex", 20.0, 0.25),
+    ("wrist_roll", 45.0, 0.40),
+    ("elbow_flex", 8.0, 0.50),
+    ("shoulder_lift", 5.0, 0.60),
 ]
 
 
 def party(robot, args, stop, commands):
     """Dance until Party is pressed again (or Ctrl+C), then ease back to where it started.
 
-    Runs its own ~40 Hz loop (tracking is limited by the camera). Ramps in over 1 s so it doesn't
-    lurch, keeps wrist_roll inside its range, and never touches the gripper.
+    Runs its own ~40 Hz loop (tracking is limited by the camera). Swings grow over the first second
+    so it doesn't lurch, wrist_roll stays inside its range, and the gripper is never touched.
     """
     start = read_joints(robot)
     log.info(f"PARTY MODE (speed x{args.party_speed:g}) - press Party again to stop")
@@ -715,8 +718,9 @@ def party(robot, args, stop, commands):
         t = time.time() - t0
         ramp = min(1.0, t / 1.0)
         action = {}
-        for joint, amp, freq, phase in PARTY_MOVES:
-            angle = start[joint] + ramp * amp * np.sin(2 * np.pi * freq * args.party_speed * t + phase)
+        for joint, amp, swing_s in PARTY_MOVES:
+            side = 1.0 if int(t * args.party_speed / swing_s) % 2 == 0 else -1.0
+            angle = start[joint] + ramp * amp * side
             if joint == ROLL:
                 angle = np.clip(angle, -170.0, 170.0)
             action[f"{joint}.pos"] = float(angle)
@@ -975,8 +979,9 @@ def main():
     p.add_argument("--contact-load", type=float, default=200.0,
                    help="stop squeezing once the gripper feels this much push-back (of 1000)")
     p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
-    p.add_argument("--party-speed", type=float, default=1.5,
-                   help="Party mode tempo multiplier (bigger = faster; the servos top out around 2.5)")
+    p.add_argument("--party-speed", type=float, default=1.0,
+                   help="Party mode tempo (bigger = quicker direction changes, smaller swings once the servos "
+                        "can't reach the ends in time)")
     p.add_argument("--rotate-deg", type=float, default=90.0,
                    help="how far the Rotate button turns the phone (wrist_roll); it picks the direction with room")
     p.add_argument("--camera-on-roll", choices=["no", "cw", "ccw"], default="no",
@@ -1004,6 +1009,9 @@ def main():
     args = p.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(asctime)s %(message)s")
+    # LeRobot warns every time a move is capped at 10 deg per command; party mode does that on purpose
+    # dozens of times a second (it's how it runs the servos at full speed), so keep the log readable.
+    logging.getLogger("lerobot.robots.utils").setLevel(logging.ERROR)
     run(args)
 
 
