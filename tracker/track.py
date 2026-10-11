@@ -4,7 +4,8 @@
 The camera must be mounted on the arm so it turns with the phone. Each frame we
 find the person, measure how far they are from the image center, and nudge
 shoulder_pan (left/right) and optionally wrist_flex (up/down) to re-center them.
-The preview also serves POST /commands and GET /status. Optional --gestures
+The preview also serves POST /commands and GET /status (Rotate 90 and Party mode
+buttons included). Optional --gestures
 uses the separate vision environment for closer/farther/freeze/resume commands.
 Optional --distance maintains an approximate calibrated camera-to-user distance.
 
@@ -45,6 +46,7 @@ FACE_MODEL = os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx")
 PAN = "shoulder_pan"
 TILT = "wrist_flex"
 GRIP = "gripper"
+ROLL = "wrist_roll"
 # Joints that feel it when someone grabs and tugs the phone.
 PULL_JOINTS = ["wrist_flex", "wrist_roll", "gripper"]
 ARM_JOINTS = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"]
@@ -280,7 +282,10 @@ button{font-size:1.2em;padding:.7em 1.6em;margin:.8em .4em;border:0;border-radiu
 <button onclick="send('closer')">Closer</button><button onclick="send('farther')">Farther</button>
 <button onclick="send('freeze')">Freeze</button><button onclick="send('resume')">Resume</button>
 <button id="rel" onclick="send('release')">Release phone</button>
-<button id="grip" onclick="send('grip')">Grip phone</button><div id="msg"></div><pre id="state"></pre>
+<button id="grip" onclick="send('grip')">Grip phone</button>
+<button onclick="send('rotate')" style="background:#2f81f7;color:#fff">Rotate phone 90&deg;</button>
+<button onclick="send('party')" style="background:#d63ac9;color:#fff">Party mode &#127881;</button>
+<div id="msg"></div><pre id="state"></pre>
 <script>async function send(c){try{const r=await fetch('/commands',{method:'POST',
 headers:{'Content-Type':'application/json'},body:JSON.stringify({command:c})});
 msg.textContent=JSON.stringify(await r.json())}catch(e){msg.textContent='Could not reach the tracker'}}
@@ -296,7 +301,8 @@ def create_api(control, preview=None):
     app = FastAPI(title="Phone tracker")
 
     @app.post("/commands", status_code=202)
-    def command(command: Literal["closer", "farther", "freeze", "resume", "release", "grip"] = Body(embed=True)):
+    def command(command: Literal["closer", "farther", "freeze", "resume", "release", "grip", "rotate",
+                                 "party"] = Body(embed=True)):
         try:
             control.submit(command)
         except queue.Full:
@@ -736,7 +742,7 @@ class DepthFollower:
 
 class TrackerControl:
     """Shared commands; only the tracking loop mutates control state or moves motors."""
-    COMMANDS = ("closer", "farther", "freeze", "resume", "release", "grip")
+    COMMANDS = ("closer", "farther", "freeze", "resume", "release", "grip", "rotate", "party")
 
     def __init__(self, args):
         self.args = args
@@ -795,6 +801,57 @@ class TrackerControl:
     def snapshot(self):
         with self.lock:
             return self.status.copy()
+
+
+# (joint, swing deg each side, seconds per swing at speed 1). Each joint is flung to one end, then the
+# other: smooth sine waves are faster than the servos can follow, so they only wiggle a little.
+# Driving straight at each end runs them at their real top speed and reaches the full swing.
+PARTY_MOVES = [
+    ("shoulder_pan", 30.0, 0.35),
+    ("wrist_flex", 20.0, 0.25),
+    ("wrist_roll", 45.0, 0.40),
+    ("elbow_flex", 8.0, 0.50),
+    ("shoulder_lift", 5.0, 0.60),
+]
+
+
+def party(robot, args, stop, commands):
+    """Dance until Party is pressed again (or Ctrl+C), then ease back to where it started.
+
+    Runs its own ~40 Hz loop (tracking is limited by the camera). Swings grow over the first second,
+    wrist_roll stays in range, and the gripper is never touched. Other commands that arrive while
+    dancing are put back in the queue for the tracking loop.
+    """
+    start = read_joints(robot)
+    log.info(f"PARTY MODE (speed x{args.party_speed:g}) - press Party again to stop")
+    deferred, last, t0 = [], {}, time.time()
+    while not stop.is_set():
+        try:
+            cmd = commands.get_nowait()
+            if cmd == "party":
+                break
+            deferred.append(cmd)
+        except queue.Empty:
+            pass
+        t = time.time() - t0
+        ramp = min(1.0, t / 1.0)
+        action = {}
+        for joint, amp, swing_s in PARTY_MOVES:
+            side = 1.0 if int(t * args.party_speed / swing_s) % 2 == 0 else -1.0
+            angle = start[joint] + ramp * amp * side
+            if joint == ROLL:
+                angle = np.clip(angle, -170.0, 170.0)
+            action[f"{joint}.pos"] = float(angle)
+        robot.send_action(action)
+        last = action
+        time.sleep(max(0.0, 1 / 40 - (time.time() - t0 - t)))
+    # Ease back to the starting pose over 1 s so tracking picks up where it left off.
+    for i in range(1, 21):
+        robot.send_action({k: float(v + (start[k.removesuffix(".pos")] - v) * i / 20) for k, v in last.items()})
+        time.sleep(0.05)
+    for cmd in deferred:
+        commands.put_nowait(cmd)
+    log.info("Party over, back to tracking")
 
 
 def start_gestures(args):
@@ -892,6 +949,11 @@ def run(args):
             elif args.release_on_pull:
                 log.warning("--release-on-pull ignored: run --test-gripper and pass --gripper-open-sign first")
 
+        roll_home = read_joints(robot)[ROLL] if robot else 0.0
+        # wrist_roll spans about -180..180 deg: turn whichever way stays inside that range.
+        rotate_by = args.rotate_deg if abs(roll_home + args.rotate_deg) <= 170 else -args.rotate_deg
+        rotated = False  # phone turned 90 deg from where it started
+
         def release(reason):
             nonlocal held, pull_warned
             log.info(f"Releasing phone ({reason})")
@@ -908,13 +970,30 @@ def run(args):
             held = True
 
         def process_commands():
-            nonlocal hik, z_goal
+            nonlocal hik, z_goal, rotated, smoothed
             for _ in range(32):
                 try:
                     cmd = commands.get_nowait()
                 except queue.Empty:
                     break
-                if cmd in ("release", "grip"):
+                if cmd in ("rotate", "party") and not robot:
+                    result = "ignored: dry run"
+                elif cmd == "rotate":
+                    start = roll_home + (rotate_by if rotated else 0.0)
+                    end = roll_home + (0.0 if rotated else rotate_by)
+                    log.info(f"Rotating the phone {'back' if rotated else 'by'} {end - start:+.0f} deg")
+                    for i in range(1, 31):  # slowly, over about 1.5 s
+                        robot.send_action({f"{ROLL}.pos": float(start + (end - start) * i / 30)})
+                        time.sleep(0.05)
+                    rotated = not rotated
+                    smoothed = None  # the view just turned; re-find the person
+                    result = "applied"
+                elif cmd == "party":
+                    control.publish(mode="party")
+                    party(robot, args, stop, commands)
+                    smoothed = None  # re-find the person after dancing
+                    result = "applied"
+                elif cmd in ("release", "grip"):
                     if not robot:
                         result = "ignored: dry run"
                     elif not args.gripper_open_sign:
@@ -955,6 +1034,10 @@ def run(args):
                 control.publish(mode="frozen" if control.frozen else "hold", target_visible=False, motion_blocker="camera unavailable")
                 log.warning("No new frame from the camera for 1 s")
                 continue
+            if rotated and args.camera_on_roll != "no":
+                # The camera turned with the phone: turn the picture back so people are upright again.
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE if args.camera_on_roll == "cw"
+                                   else cv2.ROTATE_90_COUNTERCLOCKWISE)
             h, w = frame.shape[:2]
 
             boxes = detector.detect(frame)
@@ -1077,6 +1160,8 @@ def run(args):
                     pose += f" load_change={pull.deviation:.0f}"
                 if robot and not held:
                     pose += " RELEASED (press g+ENTER or the Grip button)"
+                if rotated:
+                    pose += " ROTATED"
                 log.info(f"camera {cam_fps:4.1f} fps, processed {fps:4.1f} fps | {len(boxes)} detections | err x={ex:+.2f} y={ey:+.2f}{pose}")
 
             if preview:
@@ -1102,6 +1187,13 @@ def run(args):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--camera", default="/dev/video0", help="camera mounted on the arm (path or index)")
+    p.add_argument("--party-speed", type=float, default=1.0,
+                   help="Party mode tempo (bigger = quicker direction changes, smaller swings once the servos "
+                        "can't reach the ends in time)")
+    p.add_argument("--rotate-deg", type=float, default=90.0,
+                   help="how far the Rotate button turns the phone (wrist_roll); it picks the direction with room")
+    p.add_argument("--camera-on-roll", choices=["no", "cw", "ccw"], default="no",
+                   help="if the camera turns with the phone, which way to turn the picture back after rotating")
     p.add_argument("--flip", action="store_true", help="rotate the image 180 deg (camera mounted upside down)")
     p.add_argument("--exposure", type=float,
                    help="manual exposure in 0.1 ms units (e.g. 300 for 30 fps in a dim room); default = camera auto")
@@ -1189,6 +1281,9 @@ def main():
         p.error("--preview-port must be between 0 and 65535")
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(asctime)s %(message)s")
+    # LeRobot warns each time a move is capped at 10 deg per command; Party mode does that on purpose
+    # dozens of times a second (it's how it runs the servos at full speed), so keep the log readable.
+    logging.getLogger("lerobot.robots.utils").setLevel(logging.ERROR)
     run(args)
 
 
