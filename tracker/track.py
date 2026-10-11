@@ -2395,6 +2395,9 @@ def main():
     # LeRobot warns each time a move is capped at 10 deg per command; Party mode does that on purpose
     # dozens of times a second (it's how it runs the servos at full speed), so keep the log readable.
     logging.getLogger("lerobot.robots.utils").setLevel(logging.ERROR)
+    # LeRobot can re-apply its own logging setup when it loads, so also drop the message at the output.
+    for handler in logging.getLogger().handlers:
+        handler.addFilter(lambda record: "had to be clamped to be safe" not in record.getMessage())
     run(args)
 
 

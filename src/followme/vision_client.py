@@ -37,8 +37,13 @@ class VisionClient:
         for key in ('PYTHONPATH','PYTHONHOME','VIRTUAL_ENV','LD_LIBRARY_PATH'):
             env.pop(key,None)
         env['PYTHONNOUSERSITE']='1'
+        # Run the worker from this checkout's src/, not from whichever checkout the vision environment
+        # was pip-installed from (otherwise a second clone silently runs the first clone's gesture code).
+        bootstrap=("import runpy,sys;src,module=sys.argv[1],sys.argv[2];del sys.argv[1:3];"
+                   "sys.path.insert(0,src);runpy.run_module(module,run_name='__main__',alter_sys=True)")
         try:
-            self.process=subprocess.Popen([str(interpreter),'-I','-m',self.config.get('worker_module','followme.vision_worker'),
+            self.process=subprocess.Popen([str(interpreter),'-I','-c',bootstrap,str(Path(self.root)/'src'),
+                self.config.get('worker_module','followme.vision_worker'),
                 '--fd',str(child.fileno()),'--model',str(model),'--manifest',str(manifest)],
                 pass_fds=(child.fileno(),),env=env,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
                 stderr=None,cwd=self.root)
