@@ -1719,11 +1719,8 @@ def run(args):
                 continue
             if rotated and args.camera_on_roll != "no":
                 # The camera turned with the phone: turn the picture back so people are upright again.
-                if args.camera_on_roll in ("cw", "ccw"):
-                    clockwise = args.camera_on_roll == "cw"
-                else:  # turn it back the opposite way to the wrist turn
-                    clockwise = (rotate_by < 0) != (args.camera_on_roll == "auto-reverse")
-                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE if clockwise else cv2.ROTATE_90_COUNTERCLOCKWISE)
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE if args.camera_on_roll == "cw"
+                                   else cv2.ROTATE_90_COUNTERCLOCKWISE)
             h, w = frame.shape[:2]
 
             # Voice: while one of the --voice people was heard recently, follow only that person's face;
@@ -2037,9 +2034,7 @@ def run(args):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--camera", default="/dev/video2",
-                   help="camera to track with (path or index); default is the one on the claw, which turns with "
-                        "the phone, see --camera-on-roll")
+    p.add_argument("--camera", default="/dev/video0", help="camera mounted on the arm (path or index)")
     p.add_argument("--home-reach", type=float, default=0.28, help="Reset pose: gripper tip metres in front of the base")
     p.add_argument("--home-height", type=float, default=0.26, help="Reset pose: gripper tip metres above the base")
     p.add_argument("--home-pitch", type=float, default=0.0,
@@ -2055,10 +2050,8 @@ def main():
                         "can't reach the ends in time)")
     p.add_argument("--rotate-deg", type=float, default=90.0,
                    help="how far the Rotate button turns the phone (wrist_roll); it picks the direction with room")
-    p.add_argument("--camera-on-roll", choices=["auto", "auto-reverse", "no", "cw", "ccw"], default="auto",
-                   help="the claw camera turns with the phone, so after Rotate/landscape the picture is turned back "
-                        "upright: auto = against the wrist turn; auto-reverse if people come out upside down; "
-                        "no for a camera that doesn't turn with the phone")
+    p.add_argument("--camera-on-roll", choices=["no", "cw", "ccw"], default="no",
+                   help="if the camera turns with the phone, which way to turn the picture back after rotating")
     p.add_argument("--flip", action="store_true", help="rotate the image 180 deg (camera mounted upside down)")
     p.add_argument("--exposure", type=float,
                    help="manual exposure in 0.1 ms units (e.g. 300 for 30 fps in a dim room); default = camera auto")
