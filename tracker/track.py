@@ -6,7 +6,8 @@ find the person, measure how far they are from the image center, and nudge
 shoulder_pan (left/right) and optionally wrist_flex (up/down) to re-center them.
 The preview also serves POST /commands and GET /status (Rotate 90 and Party mode
 buttons included). Optional --gestures
-uses the separate vision environment for closer/farther/freeze/resume commands.
+uses the separate vision environment for closer/farther/freeze/resume commands, and turning a
+flat edge-on hand 90 degrees rotates the phone to match (landscape/portrait).
 Optional --distance maintains an approximate calibrated camera-to-user distance.
 Cover the camera with your hand for 2 s to release the phone (Grip phone puts it back).
 
@@ -310,7 +311,7 @@ def create_api(control, preview=None):
 
     @app.post("/commands", status_code=202)
     def command(command: Literal["closer", "farther", "freeze", "resume", "release", "grip", "rotate",
-                                 "party", "home"] = Body(embed=True)):
+                                 "party", "home", "landscape", "portrait"] = Body(embed=True)):
         try:
             control.submit(command)
         except queue.Full:
@@ -434,6 +435,8 @@ def find_follower_port():
 
 def other_users_of(device):
     """PIDs + command lines of other processes that have `device` open (Linux /proc scan)."""
+    if not isinstance(device, (str, bytes, os.PathLike)):
+        return []  # not a real port (e.g. a test double)
     target = os.path.realpath(device)
     found = []
     for pid in filter(str.isdigit, os.listdir("/proc") if os.path.isdir("/proc") else []):
@@ -513,9 +516,9 @@ def disconnect_arm(robot, args):
 def free_gripper_fresh(port):
     """The manual fix that always worked, as the very last step: a brand-new connection that only
     turns the gripper motor off, then disconnects without touching the other motors."""
-    from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
-
     try:
+        from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
+
         r = SO101Follower(SO101FollowerConfig(port=port, id=FOLLOWER_ID))
         r.bus.connect(handshake=False)  # skip the all-motors check: only the gripper matters here
         r.bus.disable_torque(GRIP, num_retry=3)
@@ -876,7 +879,8 @@ class DepthFollower:
 
 class TrackerControl:
     """Shared commands; only the tracking loop mutates control state or moves motors."""
-    COMMANDS = ("closer", "farther", "freeze", "resume", "release", "grip", "rotate", "party", "home")
+    COMMANDS = ("closer", "farther", "freeze", "resume", "release", "grip", "rotate", "party", "home",
+                "landscape", "portrait")
 
     def __init__(self, args):
         self.args = args
@@ -1113,9 +1117,11 @@ def run(args):
                     cmd = commands.get_nowait()
                 except queue.Empty:
                     break
-                if cmd in ("rotate", "party", "home") and not robot:
+                if cmd in ("rotate", "party", "home", "landscape", "portrait") and not robot:
                     result = "ignored: dry run"
-                elif cmd == "rotate":
+                elif (cmd == "landscape" and rotated) or (cmd == "portrait" and not rotated):
+                    result = "already applied"
+                elif cmd in ("rotate", "landscape", "portrait"):  # the hand-twist gesture sends landscape/portrait
                     start = roll_home + (rotate_by if rotated else 0.0)
                     end = roll_home + (0.0 if rotated else rotate_by)
                     log.info(f"Rotating the phone {'back' if rotated else 'by'} {end - start:+.0f} deg")
@@ -1327,6 +1333,8 @@ def run(args):
                     action[f"{TILT}.pos"] = tilt_goal
                 if action:
                     sent = robot.send_action(action)
+                    if not isinstance(sent, dict):  # LeRobot returns what it sent; anything else: assume as asked
+                        sent = action
                     # Anti-windup: LeRobot caps each move at 10 deg from where the joint really is, and a joint at
                     # its physical end can't move at all. Continue from what was actually sent, so our target never
                     # runs ahead of the arm (otherwise it must "unwind" before the arm turns back the other way).
@@ -1414,7 +1422,8 @@ def main():
                    help="move the phone straight up (or down, if negative) this many cm with IK, then hold")
     p.add_argument("--height", action="store_true",
                    help="follow up/down by moving the phone (shoulder+elbow via IK) as well as tilting")
-    p.add_argument("--gestures", action="store_true", help="enable closer/farther/freeze/resume via the vision worker")
+    p.add_argument("--gestures", action="store_true",
+                   help="enable closer/farther/freeze/resume and the hand twist (rotate) via the vision worker")
     p.add_argument("--gesture-python", default=str(ROOT / ".venv-vision/bin/python"), help="isolated vision Python interpreter")
     p.add_argument("--gesture-step", type=float, default=0.02, help="metres per closer/farther command")
     p.add_argument("--distance", type=float, help="follow at this approximate calibrated distance in metres")
