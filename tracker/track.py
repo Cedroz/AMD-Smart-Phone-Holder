@@ -24,6 +24,7 @@ import glob
 import http.server
 import logging
 import os
+import queue
 import signal
 import socketserver
 import sys
@@ -44,6 +45,7 @@ FACE_MODEL = os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx")
 PAN = "shoulder_pan"
 TILT = "wrist_flex"
 GRIP = "gripper"
+ROLL = "wrist_roll"
 ARM_JOINTS = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"]
 # SO-101 model shipped with the LeRobot move_to example on the arm; needs `placo` (installed in the lerobot env).
 DEFAULT_URDF = os.path.expanduser("~/lerobot/examples/so101_move_to/SO101/so101_new_calib.urdf")
@@ -272,10 +274,22 @@ def pick_target(boxes, prev, max_jump):
 # --------------------------------------------------------------------------- preview server
 
 
-class Preview:
-    """Serves the annotated camera feed as MJPEG at http://<host>:<port>/"""
+PREVIEW_PAGE = b"""<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phone tracker</title><style>
+body{margin:0;background:#111;color:#eee;font-family:system-ui,sans-serif;text-align:center}
+img{max-width:100%;display:block;margin:0 auto}
+button{font-size:1.2em;padding:.7em 1.6em;margin:.8em .4em;border:0;border-radius:.5em;cursor:pointer;
+background:#2f81f7;color:#fff}#msg{min-height:1.4em}
+</style></head><body><img src="/stream">
+<button onclick="send('rotate')">Rotate phone 90&deg;</button><div id="msg"></div>
+<script>function send(c){fetch('/'+c,{method:'POST'}).then(r=>r.text()).then(t=>msg.textContent=t)
+.catch(()=>msg.textContent='Could not reach the tracker')}</script></body></html>"""
 
-    def __init__(self, port):
+
+class Preview:
+    """Serves a page at http://<host>:<port>/ with the annotated camera feed and a Rotate button."""
+
+    def __init__(self, port, on_command):
         self.jpeg = None
         self.version = 0
         self.cond = threading.Condition()
@@ -285,7 +299,24 @@ class Preview:
             def log_message(self, *args):
                 pass
 
+            def do_POST(self):
+                if self.path.strip("/") == "rotate":
+                    on_command("rotate")
+                    body, code = b"Rotating...", 200
+                else:
+                    body, code = b"unknown command", 404
+                self.send_response(code)
+                self.send_header("Content-Type", "text/plain")
+                self.end_headers()
+                self.wfile.write(body)
+
             def do_GET(self):
+                if self.path != "/stream":
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html")
+                    self.end_headers()
+                    self.wfile.write(PREVIEW_PAGE)
+                    return
                 self.send_response(200)
                 self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
                 self.end_headers()
@@ -684,7 +715,8 @@ def run(args):
     else:
         detector = PersonDetector()
         log.info("Detector: OpenCV Haar/HOG (models not found in tracker/models/)")
-    preview = Preview(args.preview_port) if args.preview_port else None
+    commands = queue.Queue()  # "rotate" from the preview page button
+    preview = Preview(args.preview_port, commands.put) if args.preview_port else None
 
     pan_goal = tilt_goal = pan_home = tilt_home = None
     hik = None
@@ -710,6 +742,10 @@ def run(args):
             robot.bus.write("Torque_Limit", GRIP, int(args.grip_torque * 10), num_retry=3)
     log.info(f"Cover the camera with your hand for {args.cover_seconds:g} s to release the phone")
     person_seen = 0.0  # last time anyone was detected
+    roll_home = read_joints(robot)[ROLL] if robot else 0.0
+    # wrist_roll spans about -180..180 deg: turn whichever way stays inside that range.
+    rotate_by = args.rotate_deg if abs(roll_home + args.rotate_deg) <= 170 else -args.rotate_deg
+    rotated = False  # phone turned 90 deg from where it started
     cover_start = None  # when the picture went blank; False = went blank with nobody around (ignored)
 
     smoothed = None
@@ -724,6 +760,10 @@ def run(args):
             if frame is None:
                 log.warning("No new frame from the camera for 1 s")
                 continue
+            if rotated and args.camera_on_roll != "no":
+                # The camera turned with the phone: turn the picture back so people are upright again.
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE if args.camera_on_roll == "cw"
+                                   else cv2.ROTATE_90_COUNTERCLOCKWISE)
             h, w = frame.shape[:2]
 
             boxes = detector.detect(frame)
@@ -764,6 +804,23 @@ def run(args):
             else:
                 cover_start = None
             covered_for = now - cover_start if cover_start else 0.0
+
+            try:
+                cmd = commands.get_nowait()
+            except queue.Empty:
+                cmd = None
+            if cmd == "rotate":
+                start = roll_home + (rotate_by if rotated else 0.0)
+                end = roll_home + (0.0 if rotated else rotate_by)
+                if robot:
+                    log.info(f"Rotating the phone to {'landscape' if not rotated else 'back'} ({end - roll_home:+.0f} deg)")
+                    for i in range(1, 31):  # slowly, over about 1.5 s
+                        robot.send_action({f"{ROLL}.pos": float(start + (end - start) * i / 30)})
+                        time.sleep(0.05)
+                else:
+                    log.info("Rotate pressed: would rotate the phone now (dry run)")
+                rotated = not rotated
+                continue  # next frame comes from the new orientation
 
             if robot and target is not None:
                 action = {}
@@ -809,7 +866,7 @@ def run(args):
                 pose = f" pan={pan_goal:.1f}" if robot else ""
                 if hik:
                     pose += f" height={(z_goal - hik.z0) * 100:+.1f}cm tilt={tilt_offset:+.1f}"
-                pose += f" detail={detail:.0f}"
+                pose += f" detail={detail:.0f}" + (" ROTATED" if rotated else "")
                 if covered_for:
                     pose += f" COVERED {covered_for:.1f}/{args.cover_seconds:g}s"
                 log.info(f"camera {cam_fps:4.1f} fps, processed {fps:4.1f} fps | {len(boxes)} detections | err x={ex:+.2f} y={ey:+.2f}{pose}")
@@ -860,6 +917,10 @@ def main():
     p.add_argument("--contact-load", type=float, default=200.0,
                    help="stop squeezing once the gripper feels this much push-back (of 1000)")
     p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
+    p.add_argument("--rotate-deg", type=float, default=90.0,
+                   help="how far the Rotate button turns the phone (wrist_roll); it picks the direction with room")
+    p.add_argument("--camera-on-roll", choices=["no", "cw", "ccw"], default="no",
+                   help="if the camera turns with the phone, which way to turn the picture back after rotating")
     p.add_argument("--cover-seconds", type=float, default=2.0,
                    help="cover the camera with your hand this long to release the phone")
     p.add_argument("--cover-detail", type=float, default=15.0,
