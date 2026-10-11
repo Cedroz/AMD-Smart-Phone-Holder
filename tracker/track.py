@@ -383,7 +383,33 @@ def find_follower_port():
     raise RuntimeError("No port matched the follower calibration. Pass --port explicitly (see lerobot-find-port).")
 
 
+def other_users_of(device):
+    """PIDs + command lines of other processes that have `device` open (Linux /proc scan)."""
+    target = os.path.realpath(device)
+    found = []
+    for pid in filter(str.isdigit, os.listdir("/proc") if os.path.isdir("/proc") else []):
+        if int(pid) == os.getpid():
+            continue
+        try:
+            fds = os.listdir(f"/proc/{pid}/fd")
+            if any(os.path.realpath(f"/proc/{pid}/fd/{fd}") == target for fd in fds):
+                with open(f"/proc/{pid}/cmdline", "rb") as f:
+                    found.append(f"{pid}: {f.read().replace(b'\0', b' ').decode(errors='replace').strip()}")
+        except OSError:
+            continue
+    return found
+
+
 def connect_arm(port):
+    # Two programs driving the arm at once fight over it (garbled packets, joints yanked both ways,
+    # gripper commands from the other program). Refuse to start if anyone else has the port open.
+    others = other_users_of(port)
+    if others:
+        raise RuntimeError(
+            "Another program is already using the arm, so we'd be fighting it:\n  " + "\n  ".join(others)
+            + "\nStop it first (kill <PID>), after checking with whoever started it."
+        )
+
     from lerobot.robots.so_follower import SO101Follower, SO101FollowerConfig
 
     config = SO101FollowerConfig(
@@ -413,14 +439,16 @@ def connect_arm(port):
 
 
 def disconnect_arm(robot, args):
-    """Disconnect, leaving the arm holding its pose but the gripper motor off so it can be opened by hand."""
-    if not args.keep_grip:
-        try:
-            robot.bus.disable_torque(GRIP, num_retry=3)
-            log.info("Gripper motor off: you can open it by hand (use --keep-grip to keep it clamped)")
-        except ConnectionError as e:
-            log.warning(f"Couldn't switch the gripper off ({e})")
+    """Disconnect, leaving every motor on so the arm holds its pose and the gripper keeps holding the phone."""
     robot.disconnect()
+    log.info("Arm and gripper still holding. To take the phone out: hold it, then run --free-gripper")
+
+
+def free_gripper(robot, args):
+    """Turn only the gripper motor off so it can be opened by hand. The rest of the arm keeps holding."""
+    input("HOLD THE PHONE with your hand, then press ENTER to loosen the gripper...")
+    robot.bus.disable_torque(GRIP, num_retry=3)
+    print("Gripper motor off: open it by hand. The next tracker run turns it back on.")
 
 
 def read_joints(robot):
@@ -682,7 +710,7 @@ def run(args):
     signal.signal(signal.SIGINT, lambda *_: stop.set())
 
     one_shot = (args.test_pan or args.test_tilt or args.check_ik or args.test_height or args.raise_cm
-                or args.test_gripper)
+                or args.test_gripper or args.free_gripper)
     cam = None if one_shot else Camera(args.camera, exposure=args.exposure, flip=args.flip)
 
     robot = None
@@ -690,7 +718,7 @@ def run(args):
         port = args.port or (FOLLOWER_PORT if os.path.exists(FOLLOWER_PORT) else find_follower_port())
         robot = connect_arm(port)
         tests = {"test_pan": test_pan, "test_tilt": test_tilt, "check_ik": check_ik, "test_height": test_height,
-                 "raise_cm": raise_arm, "test_gripper": test_gripper}
+                 "raise_cm": raise_arm, "test_gripper": test_gripper, "free_gripper": free_gripper}
         for name, fn in tests.items():
             if getattr(args, name):
                 try:
@@ -912,8 +940,8 @@ def main():
     p.add_argument("--height-down", type=float, default=0.10, help="max metres the phone may drop from the start pose")
     p.add_argument("--height-rate", type=float, default=0.0005,
                    help="metres per frame per degree of wrist tilt (how eagerly the phone moves to eye level)")
-    p.add_argument("--keep-grip", action="store_true",
-                   help="leave the gripper clamped when the program exits (default: gripper motor turns off)")
+    p.add_argument("--free-gripper", action="store_true",
+                   help="while you hold the phone: turn the gripper motor off so it can be opened by hand")
     p.add_argument("--test-gripper", action="store_true",
                    help="while you hold the phone: find which way opens the gripper, and show pull loads")
     p.add_argument("--gripper-open-sign", type=float, choices=[1.0, -1.0], default=1.0,
@@ -937,7 +965,7 @@ def main():
     p.add_argument("--tilt-sign", type=float, default=1.0, choices=[1.0, -1.0])
     p.add_argument("--gain", type=float, default=0.15, help="fraction of the angular error corrected per frame")
     p.add_argument("--deadband", type=float, default=0.10, help="ignore errors smaller than this (fraction of half-frame)")
-    p.add_argument("--max-step", type=float, default=3.0, help="max degrees per frame")
+    p.add_argument("--max-step", type=float, default=1.5, help="max degrees per frame (bigger = faster but jerkier)")
     p.add_argument("--hfov", type=float, default=60.0, help="camera horizontal field of view in degrees")
     p.add_argument("--pan-limit", type=float, default=90.0, help="max degrees left/right of the start pose")
     p.add_argument("--tilt-limit", type=float, default=25.0, help="max degrees up/down of the start pose")
