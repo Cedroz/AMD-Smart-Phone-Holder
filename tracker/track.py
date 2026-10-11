@@ -930,7 +930,17 @@ def run(args):
                     )
                     action[f"{TILT}.pos"] = tilt_goal
                 if action:
-                    robot.send_action(action)
+                    sent = robot.send_action(action)
+                    # Anti-windup: LeRobot caps each move at 10 deg from where the joint really is, and a joint at
+                    # its physical end can't move at all. Continue from what was actually sent, so our target never
+                    # runs ahead of the arm (otherwise it must "unwind" before the arm turns back the other way).
+                    if f"{PAN}.pos" in sent:
+                        pan_goal = float(sent[f"{PAN}.pos"])
+                    if f"{TILT}.pos" in sent:
+                        if hik:
+                            tilt_offset = float(np.clip(sent[f"{TILT}.pos"] - hik.q[3], -args.tilt_limit, args.tilt_limit))
+                        else:
+                            tilt_goal = float(sent[f"{TILT}.pos"])
 
             frames += 1
             if time.time() - t_fps >= 1.0:
