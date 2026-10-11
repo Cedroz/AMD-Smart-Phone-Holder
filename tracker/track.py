@@ -442,9 +442,18 @@ def connect_arm(port):
 
 
 def disconnect_arm(robot, args):
-    """Disconnect, leaving every motor on so the arm holds its pose and the gripper keeps holding the phone."""
+    """Disconnect with the arm holding its pose and the gripper on a soft hold.
+
+    Fully stiff, the gripper can't be opened by hand; fully off, the phone can slide out. A low live
+    torque limit keeps it lightly holding the phone while letting fingers pry it open.
+    """
+    try:
+        robot.bus.write("Torque_Limit", GRIP, int(args.exit_grip_torque * 10), num_retry=3)
+        log.info(f"Gripper on a soft hold ({args.exit_grip_torque:g}% force): it still holds the phone "
+                 "lightly, and you can open it by hand")
+    except ConnectionError as e:
+        log.warning(f"Couldn't soften the gripper ({e}); use --free-gripper to loosen it")
     robot.disconnect()
-    log.info("Arm and gripper still holding. To take the phone out: hold it, then run --free-gripper")
 
 
 def free_gripper(robot, args):
@@ -820,6 +829,9 @@ def run(args):
         goals = {j: v for j, v in read_joints(robot).items()}
         if args.gripper_open_sign and args.squeeze > 0:
             grip_home = gentle_squeeze(robot, args, grip_home)
+        else:
+            # The last run left the gripper on a soft hold; restore the normal tracking grip force.
+            robot.bus.write("Torque_Limit", GRIP, int(args.grip_torque * 10), num_retry=3)
         if args.gripper_open_sign:
             log.info(f"Gripper: holding at {grip_home:.1f}; release: 'r'+ENTER or the page button, grip: 'g'+ENTER")
             if args.release_on_pull:
@@ -996,6 +1008,8 @@ def main():
     p.add_argument("--height-down", type=float, default=0.10, help="max metres the phone may drop from the start pose")
     p.add_argument("--height-rate", type=float, default=0.0005,
                    help="metres per frame per degree of wrist tilt (how eagerly the phone moves to eye level)")
+    p.add_argument("--exit-grip-torque", type=float, default=10.0,
+                   help="gripper force left on when the program exits, %% (low enough to open by hand)")
     p.add_argument("--free-gripper", action="store_true",
                    help="while you hold the phone: turn the gripper motor off so it can be opened by hand")
     p.add_argument("--test-gripper", action="store_true",
