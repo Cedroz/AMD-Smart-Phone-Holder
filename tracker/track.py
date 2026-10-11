@@ -590,6 +590,9 @@ class PullDetector:
     sudden change counts. `level` is the strongest signal as a fraction of its threshold (1.0 = pull).
     """
 
+    WARMUP_S = 2.0  # after (re)gripping, let the squeeze settle before watching for pulls
+    MAX_PULL_S = 2.0  # a hand pull comes and goes; a change that lasts longer is the new normal
+
     def __init__(self, thresholds, hold_s):
         self.thresholds, self.hold_s = thresholds, hold_s
         self.reset()
@@ -597,6 +600,12 @@ class PullDetector:
     def reset(self):
         self.baseline, self.since, self.level, self.strongest = None, None, 0.0, ""
         self.peak, self.peak_key = 0.0, ""
+        self.started = None
+
+    def rebaseline(self, signals=None):
+        """Accept the current readings as normal (after a steady change, or a pull with nobody close)."""
+        self.baseline = None if signals is None else {k: float(v) for k, v in signals.items()}
+        self.since = None
 
     def take_peak(self):
         """Strongest level (and its signal) since the last call, for the once-a-second log line."""
@@ -606,8 +615,10 @@ class PullDetector:
 
     def update(self, signals, now):
         """Returns (pulling, confirmed): pulling = over threshold now, confirmed = for hold_s seconds."""
-        if self.baseline is None:
-            self.baseline = {k: float(v) for k, v in signals.items()}
+        if self.started is None:
+            self.started = now
+        if self.baseline is None or now - self.started < self.WARMUP_S:
+            self.rebaseline(signals)
             return False, False
         ratios = {k: abs(signals[k] - self.baseline[k]) / self.thresholds[k.split(":")[0]] for k in signals}
         self.strongest = max(ratios, key=ratios.get)
@@ -617,6 +628,10 @@ class PullDetector:
         if self.level > 1.0:
             if self.since is None:
                 self.since = now
+            if now - self.since > self.MAX_PULL_S:
+                log.info(f"Steady change on {self.strongest} (not a pull); re-zeroed")
+                self.rebaseline(signals)
+                return False, False
             return True, now - self.since >= self.hold_s
         self.since = None
         for k in signals:
@@ -625,15 +640,17 @@ class PullDetector:
 
 
 def read_pull_signals(robot, goals):
-    """{"load:<joint>": servo load, "push:<joint>": degrees away from its last goal}, or None on a glitch."""
+    """{"push:<joint>": degrees each joint sits away from its last goal}, or None on a bus glitch.
+
+    Only displacement, not servo load: load shifts on its own (the grip settling, the pose changing how
+    much weight a joint carries), and twice that released the phone with nobody touching it. A hand
+    pulling the phone physically pushes the joints out of position; drifting load readings don't.
+    """
     try:
-        loads = robot.bus.sync_read("Present_Load", PULL_JOINTS, num_retry=2)
         pos = robot.bus.sync_read("Present_Position", PUSH_JOINTS, num_retry=2)
     except ConnectionError:
         return None
-    signals = {f"load:{j}": float(v) for j, v in loads.items()}
-    signals.update({f"push:{j}": float(pos[j] - goals[j]) for j in PUSH_JOINTS})
-    return signals
+    return {f"push:{j}": float(pos[j] - goals[j]) for j in PUSH_JOINTS}
 
 
 def test_gripper(robot, args, amount=10.0):
@@ -647,19 +664,19 @@ def test_gripper(robot, args, amount=10.0):
     print("If it LOOSENED, use --gripper-open-sign 1. If it SQUEEZED, use --gripper-open-sign -1.\n")
     print("Now TUG THE PHONE FIRMLY a few times, like you're taking it out (8 s). Watch both columns...")
     base = read_loads(robot)
-    base_pos = robot.bus.sync_read("Present_Position", PULL_JOINTS, num_retry=2)
+    base_pos = robot.bus.sync_read("Present_Position", PUSH_JOINTS, num_retry=2)
     t_end = time.time() + 8
     while time.time() < t_end:
         loads = read_loads(robot)
         try:
-            pos = robot.bus.sync_read("Present_Position", PULL_JOINTS, num_retry=2)
+            pos = robot.bus.sync_read("Present_Position", PUSH_JOINTS, num_retry=2)
         except ConnectionError:
             pos = None
         if loads and base and pos:
             print("  force: " + " ".join(f"{j}={loads[j] - base[j]:+5.0f}" for j in PULL_JOINTS)
-                  + "  | pushed by: " + " ".join(f"{j}={pos[j] - base_pos[j]:+5.1f}" for j in PULL_JOINTS))
+                  + "  | pushed by (deg): " + " ".join(f"{j}={pos[j] - base_pos[j]:+5.1f}" for j in PUSH_JOINTS))
         time.sleep(0.25)
-    print("Send these numbers: they show whether force or position works better for detecting a tug.")
+    print(f"Release-on-pull triggers when any 'pushed by' value passes {args.pull_deg:g} deg for {args.pull_time:g} s.")
 
 
 def check_ik(robot, args):
@@ -798,7 +815,6 @@ def run(args):
     grip_home = None
     pull = None
     near_seen = 0.0  # last time a person was close enough to be the one grabbing the phone
-    pull_warned = False
     if robot:
         grip_home = read_joints(robot)[GRIP]
         goals = {j: v for j, v in read_joints(robot).items()}
@@ -807,17 +823,17 @@ def run(args):
         if args.gripper_open_sign:
             log.info(f"Gripper: holding at {grip_home:.1f}; release: 'r'+ENTER or the page button, grip: 'g'+ENTER")
             if args.release_on_pull:
-                pull = PullDetector({"load": args.pull_threshold, "push": args.pull_deg}, args.pull_time)
+                pull = PullDetector({"push": args.pull_deg}, args.pull_time)
                 log.info(f"Release on pull: ON (pull the phone firmly for {args.pull_time:g} s to take it; "
                          "--no-release-on-pull to disable)")
         elif args.release_on_pull:
             log.warning("--release-on-pull ignored: run --test-gripper and pass --gripper-open-sign first")
 
     def release(reason):
-        nonlocal held, pull_warned
+        nonlocal held
         log.info(f"Releasing phone ({reason})")
         move_gripper(robot, grip_home, grip_home + args.gripper_open_sign * args.release_amount)
-        held, pull_warned = False, False
+        held = False
 
     def grip():
         nonlocal held
@@ -882,11 +898,13 @@ def run(args):
                         # Hold still while checking: lag from our own motion fades in a fraction of a
                         # second once we stop, a hand pulling on the phone doesn't.
                         freeze = pulling
-                        if confirmed and now - near_seen < 5.0:
+                        if confirmed and now - near_seen < 1.0:
                             release(f"pulled by hand ({pull.strongest})")
-                        elif confirmed and not pull_warned:
-                            log.warning("Felt a pull but nobody is close to the phone; not releasing")
-                            pull_warned = True
+                        elif confirmed:
+                            # Never wait around for someone to show up: a force with nobody at the
+                            # phone isn't a hand, so accept it as normal and keep tracking.
+                            log.info("Felt a force but nobody is at the phone; ignoring it")
+                            pull.rebaseline(signals)
             elif robot and not commands.empty():
                 commands.get_nowait()
                 log.warning("Release/grip needs --gripper-open-sign (run --test-gripper first)")
@@ -991,10 +1009,8 @@ def main():
     p.add_argument("--contact-load", type=float, default=200.0,
                    help="stop squeezing once the gripper feels this much push-back (of 1000)")
     p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
-    p.add_argument("--release-on-pull", action=argparse.BooleanOptionalAction, default=True,
-                   help="let go of the phone when someone close by pulls it (on by default)")
-    p.add_argument("--pull-threshold", type=float, default=100.0,
-                   help="wrist/gripper servo load change (of 1000) that counts as a pull")
+    p.add_argument("--release-on-pull", action=argparse.BooleanOptionalAction, default=False,
+                   help="let go of the phone when someone close by pulls it (test with a hand under the phone)")
     p.add_argument("--pull-deg", type=float, default=3.5,
                    help="degrees a shoulder/elbow/wrist joint must be pushed out of position to count as a pull")
     p.add_argument("--pull-time", type=float, default=0.3, help="seconds the pull must last (arm holds still)")
