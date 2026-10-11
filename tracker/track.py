@@ -460,13 +460,16 @@ def disconnect_arm(robot, args):
             if robot.bus.read("Torque_Enable", GRIP, num_retry=3) == 0:
                 log.info("Gripper motor off: the clamp can be moved by hand")
                 break
-        except ConnectionError as e:
+        except (ConnectionError, OSError) as e:
             log.debug(f"Gripper off attempt {attempt + 1} failed: {e}")
         time.sleep(0.1)
     else:
         log.warning("Couldn't confirm the gripper motor is off; trying again on a fresh connection")
     port = robot.config.port
-    robot.disconnect()
+    try:
+        robot.disconnect()
+    except (ConnectionError, OSError) as e:
+        log.warning(f"Disconnect hit a bus error ({e})")
     free_gripper_fresh(port)
 
 
@@ -803,9 +806,19 @@ def run(args):
     seq, seq_at_t_fps = 0, 0
     frames, t_fps, fps, cam_fps = 0, time.time(), 0.0, 0.0
     t_end = time.time() + args.max_seconds if args.max_seconds else None
+    last_share_check = 0.0
 
     try:
         while not stop.is_set() and (t_end is None or time.time() < t_end):
+            # Someone may start another program on the arm while we run; fighting it garbles the bus
+            # and crashes both, so stop cleanly as soon as it shows up.
+            if robot and time.time() - last_share_check > 2.0:
+                last_share_check = time.time()
+                others = other_users_of(robot.config.port)
+                if others:
+                    log.error("Another program just started using the arm, stopping so we don't fight it:\n  "
+                              + "\n  ".join(others))
+                    break
             seq, frame = cam.read(seq)
             if frame is None:
                 log.warning("No new frame from the camera for 1 s")
@@ -940,6 +953,10 @@ def run(args):
                 if covered_for:
                     status = f"COVERED {covered_for:.1f} / {args.cover_seconds:g} s - releasing at {args.cover_seconds:g}"
                 preview.show(annotate(frame, boxes, target, smoothed, args.deadband, status))
+    except OSError as e:  # serial errors: the port vanished or another program is talking to the arm
+        others = other_users_of(robot.config.port) if robot else []
+        log.error(f"Lost contact with the arm ({e})" + (
+            "\nAnother program is using it:\n  " + "\n  ".join(others) if others else ""))
     finally:
         cam.close()
         if robot:
