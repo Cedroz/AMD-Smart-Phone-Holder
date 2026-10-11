@@ -1,0 +1,13 @@
+numpy==1.26.4
+setuptools==80.9.0
+scipy==1.15.2
+sounddevice==0.5.1
+soundfile==0.13.1
+webrtcvad-wheels==2.0.14
+torch==2.5.1
+librosa==0.10.2.post1
+resemblyzer==0.1.4
+scikit-learn==1.6.1
+matplotlib==3.10.0
+datasets==3.3.2
+pyarrow==19.0.1

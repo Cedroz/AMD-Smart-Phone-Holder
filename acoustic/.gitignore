@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+enroll/
+test_wavs/
+*.npz
+test.wav
+*.log
