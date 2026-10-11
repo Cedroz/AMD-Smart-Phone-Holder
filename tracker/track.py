@@ -285,6 +285,7 @@ button{font-size:1.2em;padding:.7em 1.6em;margin:.8em .4em;border:0;border-radiu
 <button id="grip" onclick="send('grip')">Grip phone</button>
 <button onclick="send('rotate')" style="background:#2f81f7;color:#fff">Rotate phone 90&deg;</button>
 <button onclick="send('party')" style="background:#d63ac9;color:#fff">Party mode &#127881;</button>
+<button onclick="send('home')" style="background:#8b949e;color:#fff">Reset pose</button>
 <div id="msg"></div><pre id="state"></pre>
 <script>async function send(c){try{const r=await fetch('/commands',{method:'POST',
 headers:{'Content-Type':'application/json'},body:JSON.stringify({command:c})});
@@ -302,7 +303,7 @@ def create_api(control, preview=None):
 
     @app.post("/commands", status_code=202)
     def command(command: Literal["closer", "farther", "freeze", "resume", "release", "grip", "rotate",
-                                 "party"] = Body(embed=True)):
+                                 "party", "home"] = Body(embed=True)):
         try:
             control.submit(command)
         except queue.Full:
@@ -537,6 +538,73 @@ def plane_action(q, tilt_offset=0.0):
     }
 
 
+def gripper_pitch(kin):
+    """Degrees the gripper points above (+) or below (-) horizontal, for the pose last passed to FK."""
+    d = kin.robot.get_T_world_frame(kin.target_frame_name)[:3, 3] - kin.robot.get_T_world_frame("wrist_link")[:3, 3]
+    return float(np.degrees(np.arctan2(d[2], np.hypot(d[0], d[1])))), d / np.linalg.norm(d)
+
+
+def lowest_point(kin):
+    """Height (m) of the lowest of the elbow, wrist and gripper tip, for the pose last passed to FK."""
+    return min(kin.robot.get_T_world_frame(f)[2, 3] for f in ("lower_arm_link", "wrist_link", kin.target_frame_name))
+
+
+def rotation_about(axis, angle):
+    k = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
+    return np.eye(3) + np.sin(angle) * k + (1 - np.cos(angle)) * k @ k
+
+
+def plan_home(urdf, joints, args):
+    """Joint waypoints from the current pose to the default "ready" pose, or (None, reason).
+
+    Ready pose: base centred, gripper tip --home-reach forward and --home-height up, gripper pointing
+    level (--home-pitch). It is solved once with IK from a neutral seed, then reached by moving every
+    joint together in a straight line, in <=1 deg steps, checked so no part of the arm ever goes lower
+    than it already is (it never sweeps down into the table). wrist_roll and the gripper are untouched.
+    """
+    from lerobot.model.kinematics import RobotKinematics
+
+    kin = RobotKinematics(urdf, "gripper_frame_link", ARM_JOINTS)
+    roll = joints[ROLL]
+    seed = np.array([0.0, -30.0, 30.0, 0.0, roll])  # upper arm up, forearm forward
+    target = kin.forward_kinematics(seed).copy()
+    pitch, d = gripper_pitch(kin)
+    level = rotation_about(np.cross(d, [0, 0, 1]) / np.linalg.norm(np.cross(d, [0, 0, 1])),
+                           np.radians(args.home_pitch - pitch))
+    target[:3, :3] = level @ target[:3, :3]
+    target[0, 3], target[2, 3] = args.home_reach, args.home_height
+    q = seed.copy()
+    for _ in range(150):
+        q = kin.inverse_kinematics(q, target, position_weight=1.0, orientation_weight=1.0)
+        q[0], q[4] = 0.0, roll
+    reached = kin.forward_kinematics(q)
+    pos_err = float(np.linalg.norm(reached[:3, 3] - target[:3, 3]))
+    pitch_err = gripper_pitch(kin)[0] - args.home_pitch
+    if not np.isfinite(q).all() or pos_err > 0.01 or abs(pitch_err) > 3:
+        return None, f"can't reach the ready pose ({pos_err * 1000:.0f} mm / {pitch_err:+.0f} deg off)"
+
+    q0 = np.array([joints[j] for j in ARM_JOINTS], dtype=float)
+    q_goal = q.copy()
+    q_goal[4] = q0[4]
+    kin.forward_kinematics(q0)
+    floor = min(lowest_point(kin), 0.03) - 0.005  # never lower than it already is (or 3 cm)
+    n = max(1, int(np.ceil(np.abs(q_goal - q0)[:4].max() / 1.0)))
+    path = [q0 + (q_goal - q0) * i / n for i in range(1, n + 1)]
+    for i, qi in enumerate(path):
+        kin.forward_kinematics(qi)
+        if lowest_point(kin) < floor:
+            return None, (f"the way there would dip to {lowest_point(kin) * 100:.0f} cm "
+                          f"({100 * i // n}% of the way); lift the arm a little by hand first")
+    return path, None
+
+
+def drive_joints(robot, path, step_s=0.05):
+    """Send pan/lift/elbow/wrist waypoints (from plan_home) one by one."""
+    for q in path:
+        robot.send_action({f"{j}.pos": float(v) for j, v in zip(ARM_JOINTS[:4], q[:4])})
+        time.sleep(step_s)
+
+
 def move_gripper(robot, start, end, seconds=1.0, steps=20):
     for s in range(1, steps + 1):
         robot.send_action({f"{GRIP}.pos": float(start + (end - start) * s / steps)})
@@ -742,7 +810,7 @@ class DepthFollower:
 
 class TrackerControl:
     """Shared commands; only the tracking loop mutates control state or moves motors."""
-    COMMANDS = ("closer", "farther", "freeze", "resume", "release", "grip", "rotate", "party")
+    COMMANDS = ("closer", "farther", "freeze", "resume", "release", "grip", "rotate", "party", "home")
 
     def __init__(self, args):
         self.args = args
@@ -970,13 +1038,13 @@ def run(args):
             held = True
 
         def process_commands():
-            nonlocal hik, z_goal, rotated, smoothed
+            nonlocal hik, z_goal, rotated, smoothed, pan_goal, pan_home, tilt_goal, tilt_home, tilt_offset
             for _ in range(32):
                 try:
                     cmd = commands.get_nowait()
                 except queue.Empty:
                     break
-                if cmd in ("rotate", "party") and not robot:
+                if cmd in ("rotate", "party", "home") and not robot:
                     result = "ignored: dry run"
                 elif cmd == "rotate":
                     start = roll_home + (rotate_by if rotated else 0.0)
@@ -988,6 +1056,25 @@ def run(args):
                     rotated = not rotated
                     smoothed = None  # the view just turned; re-find the person
                     result = "applied"
+                elif cmd == "home":
+                    path, problem = plan_home(args.urdf, read_joints(robot), args)
+                    if problem:
+                        result = f"refused: {problem}"
+                    else:
+                        log.info(f"Moving to the ready pose ({len(path) * 0.05:.0f} s)")
+                        drive_joints(robot, path)
+                        # Track from here, as if the program had just started in this pose.
+                        joints = read_joints(robot)
+                        joints.update({j: float(v) for j, v in zip(ARM_JOINTS[:4], path[-1][:4])})
+                        pan_goal = pan_home = joints[PAN]
+                        tilt_goal = tilt_home = joints[TILT]
+                        tilt_offset = 0.0
+                        if hik:
+                            hik = HeightIK(args.urdf, joints)
+                            z_goal = hik.z0
+                            control.reach0 = control.reach = control.requested_reach = hik.reach0
+                        smoothed = None
+                        result = "applied"
                 elif cmd == "party":
                     control.publish(mode="party")
                     party(robot, args, stop, commands)
@@ -1197,6 +1284,10 @@ def run(args):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--camera", default="/dev/video0", help="camera mounted on the arm (path or index)")
+    p.add_argument("--home-reach", type=float, default=0.28, help="Reset pose: gripper tip metres in front of the base")
+    p.add_argument("--home-height", type=float, default=0.26, help="Reset pose: gripper tip metres above the base")
+    p.add_argument("--home-pitch", type=float, default=0.0,
+                   help="Reset pose: degrees the gripper points above (+) or below (-) level")
     p.add_argument("--party-speed", type=float, default=1.0,
                    help="Party mode tempo (bigger = quicker direction changes, smaller swings once the servos "
                         "can't reach the ends in time)")
