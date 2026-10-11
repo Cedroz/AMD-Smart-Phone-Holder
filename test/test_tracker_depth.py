@@ -12,7 +12,8 @@ from tracker import track
 class DepthTests(unittest.TestCase):
     def args(self, *extra):
         argv = ['track.py', '--distance', '1', '--distance-reference', '1',
-                '--distance-face-width', '100', '--smoothing', '0', '--squeeze', '0', *extra]
+                '--distance-face-width', '100', '--smoothing', '0', '--squeeze', '0',
+                '--landscape-camera', '', *extra]  # these tests simulate a single camera
         with patch('sys.argv', argv), patch.object(track, 'run') as run:
             track.main()
         return run.call_args.args[0]
@@ -205,7 +206,8 @@ class DepthTests(unittest.TestCase):
 
 class CommandTests(unittest.TestCase):
     def args(self, *extra):
-        with patch('sys.argv', ['track.py', '--preview-port', '0', '--squeeze', '0', *extra]), patch.object(track, 'run') as run:
+        # These tests simulate a single camera, so no second (landscape) camera.
+        with patch('sys.argv', ['track.py', '--preview-port', '0', '--squeeze', '0', '--landscape-camera', '', *extra]),                 patch.object(track, 'run') as run:
             track.main()
         return run.call_args.args[0]
 

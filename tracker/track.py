@@ -99,7 +99,7 @@ class Camera:
             # Auto exposure lengthens frames in dim rooms (30 fps -> ~16). Manual: V4L2 units of 0.1 ms.
             self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
             self.cap.set(cv2.CAP_PROP_EXPOSURE, exposure)
-        fourcc = int(self.cap.get(cv2.CAP_PROP_FOURCC)).to_bytes(4, "little").decode(errors="replace")
+        fourcc = (int(self.cap.get(cv2.CAP_PROP_FOURCC)) & 0xFFFFFFFF).to_bytes(4, "little").decode(errors="replace")
         log.info(f"Camera {source}: {fourcc} {int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))}x"
                  f"{int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))} @ {self.cap.get(cv2.CAP_PROP_FPS):.0f} fps requested")
         self.frame = None
@@ -124,6 +124,11 @@ class Camera:
                     self.cond.notify_all()
             else:
                 time.sleep(0.01)
+
+    def peek(self):
+        """The newest frame without waiting for a new one, or None before the first."""
+        with self.cond:
+            return None if self.frame is None else self.frame.copy()
 
     def read(self, last_seq, timeout=1.0):
         """Block until a frame newer than `last_seq` arrives. Returns (seq, frame) or (last_seq, None)."""
@@ -292,7 +297,10 @@ button{font-size:1.2em;padding:.7em 1.6em;margin:.8em .4em;border:0;border-radiu
 input{font:inherit;padding:.6em;border-radius:.4em;border:1px solid #666;max-width:55%}
 progress{width:90%;margin:.7em auto;display:block}button:disabled{opacity:.5;cursor:wait}
 #face-message{min-height:2.5em}
-</style></head><body><img src="/stream">
+#cams{display:flex;gap:6px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+#cams img{margin:0}#main{max-width:66%}#other{max-width:32%}
+</style></head><body><div id="cams"><img id="main" src="/stream"><img id="other" src="/stream2"
+onerror="this.style.display='none'"></div>
 <button onclick="send('closer')">Closer</button><button onclick="send('farther')">Farther</button>
 <button onclick="send('freeze')">Freeze</button><button onclick="send('resume')">Resume</button>
 <button id="rel" onclick="send('release')">Release phone</button>
@@ -397,6 +405,13 @@ def create_api(control, preview=None):
             raise HTTPException(503, "Camera preview unavailable")
         return StreamingResponse(preview.frames(), media_type="multipart/x-mixed-replace; boundary=frame")
 
+    @app.get("/stream2")
+    def stream2():
+        """The camera not currently used for tracking (the second camera only exists with --landscape-camera)."""
+        if preview is None:
+            raise HTTPException(503, "Camera preview unavailable")
+        return StreamingResponse(preview.frames("other"), media_type="multipart/x-mixed-replace; boundary=frame")
+
     # Preserve the old gripper-button endpoints.
     app.post("/release", status_code=202)(lambda: command("release"))
     app.post("/grip", status_code=202)(lambda: command("grip"))
@@ -408,8 +423,8 @@ class Preview:
 
     def __init__(self, port, control):
         import uvicorn
-        self.jpeg = None
-        self.version = 0
+        self.jpeg = {}  # channel -> latest JPEG: "main" (active camera, annotated), "other" (idle camera)
+        self.version = {}
         self.cond = threading.Condition()
         self.closed = False
         self.server = uvicorn.Server(uvicorn.Config(create_api(control, self),
@@ -424,24 +439,24 @@ class Preview:
             time.sleep(0.01)
         log.info(f"Preview/API at http://<arm-ip>:{port}/; API documentation at /docs")
 
-    def frames(self):
+    def frames(self, channel="main"):
         sent = 0
         while not self.closed:
             with self.cond:
-                self.cond.wait_for(lambda: self.version != sent or self.closed, timeout=1)
-                jpeg, version = self.jpeg, self.version
+                self.cond.wait_for(lambda: self.version.get(channel, 0) != sent or self.closed, timeout=1)
+                jpeg, version = self.jpeg.get(channel), self.version.get(channel, 0)
             if self.closed:
                 return
             if jpeg is not None and version != sent:
                 sent = version
                 yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n"
 
-    def show(self, frame):
+    def show(self, frame, channel="main"):
         ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
         if ok:
             with self.cond:
-                self.jpeg = buf.tobytes()
-                self.version += 1
+                self.jpeg[channel] = buf.tobytes()
+                self.version[channel] = self.version.get(channel, 0) + 1
                 self.cond.notify_all()
 
     def close(self):
@@ -1374,6 +1389,14 @@ def run(args):
     control = TrackerControl(args)
     try:
         cam = None if one_shot else Camera(args.camera, exposure=args.exposure, flip=args.flip)
+        # While the phone is turned landscape the claw blocks the main camera, so track with this one then.
+        cam2 = None
+        if cam and args.landscape_camera:
+            try:
+                cam2 = Camera(args.landscape_camera)
+                log.info(f"Landscape camera: {args.landscape_camera} (used while the phone is rotated, body tracking only)")
+            except Exception as e:  # never let the optional second camera stop the tracker
+                log.warning(f"Landscape camera unavailable, staying on the main camera when rotated: {e}")
         robot = None
         if not args.dry_run:
             port = args.port or (FOLLOWER_PORT if os.path.exists(FOLLOWER_PORT) else find_follower_port())
@@ -1431,6 +1454,8 @@ def run(args):
                         except queue.Full:
                             log.warning("Command queue is full")
             threading.Thread(target=read_terminal, daemon=True).start()
+        body_detector = YoloDetector(YOLO_MODEL) if cam2 else None  # the landscape camera is too blurry for faces
+        cam_was, seqs = cam, {}
 
         pan_goal = tilt_goal = pan_home = tilt_home = None
         hik = None
@@ -1705,7 +1730,13 @@ def run(args):
                               + "\n  ".join(others))
                     break
             process_commands()
-            seq, frame = cam.read(seq)
+            active = cam2 if rotated and cam2 else cam
+            if active is not cam_was:
+                log.info(f"Tracking with the {'landscape' if active is cam2 else 'main'} camera")
+                smoothed, cam_was = None, active
+                seq_at_t_fps = seqs.get(id(active), 0)
+            seq, frame = active.read(seqs.get(id(active), 0))
+            seqs[id(active)] = seq
             now_control = time.monotonic()
             dt, last_control = now_control - last_control, now_control
             enrolling = control.enrollment.busy
@@ -1758,7 +1789,7 @@ def run(args):
                 if boxes:
                     seek_seen = time.time()
             else:
-                boxes = detector.detect(frame)
+                boxes = (body_detector if active is cam2 else detector).detect(frame)
             face_labels = control.enrollment.labels(frame, boxes) if preview and not enrolling else {}
             target = pick_target(boxes, smoothed, args.max_jump * w)
             if target is not None:
@@ -1999,6 +2030,8 @@ def run(args):
                 mode = "DEACTIVATED" if control.deactivated else "FROZEN" if control.frozen else ("DRY RUN" if not robot else ("TRACKING" if held else "RELEASED"))
                 seen = target[4] if target is not None else "searching"
                 status = f"{mode} | {seen} | ex={ex:+.2f} | cam {cam_fps:.0f} / proc {fps:.0f} fps"
+                if cam2:
+                    status += " | LANDSCAPE cam" if active is cam2 else " | main cam"
                 if control.depth:
                     status += f" | range {control.depth.distance:.2f}m" if control.depth.distance is not None else " | depth HOLD"
                 if gestures:
@@ -2009,6 +2042,14 @@ def run(args):
                     enrollment = control.enrollment.snapshot()
                     status = f'ENROLLING {enrollment["name"]}: {enrollment["samples"]}/{enrollment["total"]}'
                 preview.show(annotate(frame, boxes, target, smoothed, args.deadband, status, face_labels))
+                # The idle camera, small beside the main view (every third frame is plenty).
+                idle = (cam if active is cam2 else cam2) if cam2 else None
+                if idle is not None and frames % 3 == 0:
+                    other = idle.peek()
+                    if other is not None:
+                        cv2.putText(other, f"{'MAIN' if idle is cam else 'LANDSCAPE'} camera (idle)", (10, 30),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+                        preview.show(other, "other")
     except OSError as e:  # serial errors: the port vanished or another program is talking to the arm
         others = other_users_of(robot.config.port) if robot else []
         log.error(f"Lost contact with the arm ({e})" + (
@@ -2027,6 +2068,8 @@ def run(args):
             preview.close()
         if cam:
             cam.close()
+        if cam2:
+            cam2.close()
         if robot:
             disconnect_arm(robot, args)
         log.info("Stopped.")
@@ -2035,6 +2078,9 @@ def run(args):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--camera", default="/dev/video0", help="camera mounted on the arm (path or index)")
+    p.add_argument("--landscape-camera", default="/dev/video2",
+                   help="camera to track with while the phone is rotated to landscape (the claw blocks the main "
+                        "one then); body tracking only. Empty string = keep using the main camera")
     p.add_argument("--home-reach", type=float, default=0.28, help="Reset pose: gripper tip metres in front of the base")
     p.add_argument("--home-height", type=float, default=0.26, help="Reset pose: gripper tip metres above the base")
     p.add_argument("--home-pitch", type=float, default=0.0,
