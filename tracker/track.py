@@ -41,8 +41,11 @@ FACE_MODEL = os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx")
 PAN = "shoulder_pan"
 TILT = "wrist_flex"
 GRIP = "gripper"
-# Joints that feel it when someone grabs and tugs the phone.
+# Joints whose servo load jumps when someone grabs and tugs the phone.
 PULL_JOINTS = ["wrist_flex", "wrist_roll", "gripper"]
+# Joints that get pushed out of position when someone pulls the phone (these servos give way rather
+# than pushing back hard, so displacement is often a clearer signal than load).
+PUSH_JOINTS = ["shoulder_lift", "elbow_flex", "wrist_flex"]
 ARM_JOINTS = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"]
 # SO-101 model shipped with the LeRobot move_to example on the arm; needs `placo` (installed in the lerobot env).
 DEFAULT_URDF = os.path.expanduser("~/lerobot/examples/so101_move_to/SO101/so101_new_calib.urdf")
@@ -576,33 +579,49 @@ def read_loads(robot):
 
 
 class PullDetector:
-    """Feels someone gripping and tugging the phone: a sustained jump in wrist/gripper servo load.
+    """Feels someone gripping and pulling the phone, even while the arm is moving.
 
-    The load from gravity and from the arm's own motion is tracked as a slowly adapting baseline;
-    only a deviation above `threshold` that lasts `hold_s` seconds counts as a pull.
+    Signals (see read_pull_signals): servo load on the wrist/gripper, and how far the shoulder, elbow
+    and wrist sit away from where we last told them to be. Each has its own threshold. The phone's
+    weight and the normal lag while moving are tracked as a slowly adapting baseline, so only a
+    sudden change counts. `level` is the strongest signal as a fraction of its threshold (1.0 = pull).
     """
 
-    def __init__(self, threshold, hold_s):
-        self.threshold, self.hold_s = threshold, hold_s
+    def __init__(self, thresholds, hold_s):
+        self.thresholds, self.hold_s = thresholds, hold_s
         self.reset()
 
     def reset(self):
-        self.baseline, self.since, self.deviation = None, None, 0.0
+        self.baseline, self.since, self.level, self.strongest = None, None, 0.0, ""
 
-    def update(self, loads, now):
-        """Returns (pulling, confirmed): pulling = over threshold now, confirmed = for long enough."""
+    def update(self, signals, now):
+        """Returns (pulling, confirmed): pulling = over threshold now, confirmed = for hold_s seconds."""
         if self.baseline is None:
-            self.baseline = {j: float(v) for j, v in loads.items()}
+            self.baseline = {k: float(v) for k, v in signals.items()}
             return False, False
-        self.deviation = max(abs(loads[j] - self.baseline[j]) for j in loads)
-        if self.deviation > self.threshold:
+        ratios = {k: abs(signals[k] - self.baseline[k]) / self.thresholds[k.split(":")[0]] for k in signals}
+        self.strongest = max(ratios, key=ratios.get)
+        self.level = ratios[self.strongest]
+        if self.level > 1.0:
             if self.since is None:
                 self.since = now
             return True, now - self.since >= self.hold_s
         self.since = None
-        for j in loads:
-            self.baseline[j] += 0.05 * (loads[j] - self.baseline[j])
+        for k in signals:
+            self.baseline[k] += 0.05 * (signals[k] - self.baseline[k])
         return False, False
+
+
+def read_pull_signals(robot, goals):
+    """{"load:<joint>": servo load, "push:<joint>": degrees away from its last goal}, or None on a glitch."""
+    try:
+        loads = robot.bus.sync_read("Present_Load", PULL_JOINTS, num_retry=2)
+        pos = robot.bus.sync_read("Present_Position", PUSH_JOINTS, num_retry=2)
+    except ConnectionError:
+        return None
+    signals = {f"load:{j}": float(v) for j, v in loads.items()}
+    signals.update({f"push:{j}": float(pos[j] - goals[j]) for j in PUSH_JOINTS})
+    return signals
 
 
 def test_gripper(robot, args, amount=10.0):
@@ -763,19 +782,22 @@ def run(args):
                      f"-{args.height_down * 100:.0f}/+{args.height_up * 100:.0f} cm")
 
     held = True  # is the gripper holding the phone?
+    goals = {}  # last position we commanded for each joint (to see when a hand pushes it away)
     grip_home = None
     pull = None
     near_seen = 0.0  # last time a person was close enough to be the one grabbing the phone
     pull_warned = False
     if robot:
         grip_home = read_joints(robot)[GRIP]
+        goals = {j: v for j, v in read_joints(robot).items()}
         if args.gripper_open_sign and args.squeeze > 0:
             grip_home = gentle_squeeze(robot, args, grip_home)
         if args.gripper_open_sign:
             log.info(f"Gripper: holding at {grip_home:.1f}; release: 'r'+ENTER or the page button, grip: 'g'+ENTER")
             if args.release_on_pull:
-                pull = PullDetector(args.pull_threshold, args.pull_time)
-                log.info(f"Release on pull: ON (threshold {args.pull_threshold:g}, {args.pull_time:g} s)")
+                pull = PullDetector({"load": args.pull_threshold, "push": args.pull_deg}, args.pull_time)
+                log.info(f"Release on pull: ON (pull the phone firmly for {args.pull_time:g} s to take it; "
+                         "--no-release-on-pull to disable)")
         elif args.release_on_pull:
             log.warning("--release-on-pull ignored: run --test-gripper and pass --gripper-open-sign first")
 
@@ -842,12 +864,14 @@ def run(args):
                 elif cmd == "grip" and not held:
                     grip()
                 if held and pull:
-                    loads = read_loads(robot)
-                    if loads:
-                        pulling, confirmed = pull.update(loads, now)
-                        freeze = pulling  # hold still while checking, so our own motion isn't mistaken for a pull
-                        if confirmed and now - near_seen < 3.0:
-                            release("pulled by hand")
+                    signals = read_pull_signals(robot, goals)
+                    if signals:
+                        pulling, confirmed = pull.update(signals, now)
+                        # Hold still while checking: lag from our own motion fades in a fraction of a
+                        # second once we stop, a hand pulling on the phone doesn't.
+                        freeze = pulling
+                        if confirmed and now - near_seen < 5.0:
+                            release(f"pulled by hand ({pull.strongest})")
                         elif confirmed and not pull_warned:
                             log.warning("Felt a pull but nobody is close to the phone; not releasing")
                             pull_warned = True
@@ -888,7 +912,8 @@ def run(args):
                     )
                     action[f"{TILT}.pos"] = tilt_goal
                 if action:
-                    robot.send_action(action)
+                    sent = robot.send_action(action)
+                    goals.update({k.removesuffix(".pos"): float(v) for k, v in sent.items()})
 
             frames += 1
             if time.time() - t_fps >= 1.0:
@@ -900,7 +925,7 @@ def run(args):
                 if hik:
                     pose += f" height={(z_goal - hik.z0) * 100:+.1f}cm tilt={tilt_offset:+.1f}"
                 if pull:
-                    pose += f" load_change={pull.deviation:.0f}"
+                    pose += f" pull={pull.level:.2f}"
                 if robot and not held:
                     pose += " RELEASED (press g+ENTER or the Grip button)"
                 log.info(f"camera {cam_fps:4.1f} fps, processed {fps:4.1f} fps | {len(boxes)} detections | err x={ex:+.2f} y={ey:+.2f}{pose}")
@@ -953,11 +978,13 @@ def main():
     p.add_argument("--contact-load", type=float, default=80.0,
                    help="stop squeezing once the gripper feels this much push-back (of 1000)")
     p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
-    p.add_argument("--release-on-pull", action="store_true",
-                   help="let go of the phone when someone close by grabs and tugs it")
-    p.add_argument("--pull-threshold", type=float, default=250.0,
-                   help="servo load change (of 1000) that counts as a tug")
-    p.add_argument("--pull-time", type=float, default=0.5, help="seconds the tug must last")
+    p.add_argument("--release-on-pull", action=argparse.BooleanOptionalAction, default=True,
+                   help="let go of the phone when someone close by pulls it (on by default)")
+    p.add_argument("--pull-threshold", type=float, default=150.0,
+                   help="wrist/gripper servo load change (of 1000) that counts as a pull")
+    p.add_argument("--pull-deg", type=float, default=5.0,
+                   help="degrees a shoulder/elbow/wrist joint must be pushed out of position to count as a pull")
+    p.add_argument("--pull-time", type=float, default=0.4, help="seconds the pull must last (arm holds still)")
     p.add_argument("--max-jump", type=float, default=0.25,
                    help="ignore detections farther than this (fraction of frame width) from the current person")
     p.add_argument("--tilt", action="store_true", help="also tilt up/down with wrist_flex")
