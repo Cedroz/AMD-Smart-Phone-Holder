@@ -558,12 +558,15 @@ def gentle_squeeze(robot, args, start):
     base = loads[GRIP] if loads else None
     steps = 30
     pos = start
+    touching = 0
     for i in range(1, steps + 1):
         pos = start - args.gripper_open_sign * args.squeeze * i / steps
         robot.send_action({f"{GRIP}.pos": float(pos)})
         time.sleep(1.5 / steps)
         loads = read_loads(robot)
-        if base is not None and loads and abs(loads[GRIP] - base) > args.contact_load:
+        # Two readings in a row, so one noisy reading doesn't stop the squeeze before it grips.
+        touching = touching + 1 if base is not None and loads and abs(loads[GRIP] - base) > args.contact_load else 0
+        if touching >= 2:
             log.info(f"Gripper felt the phone after {abs(pos - start):.1f}; holding there")
             break
     log.info(f"Gripper holding the phone at {pos:.1f} with force capped at {args.grip_torque:g}%")
@@ -593,6 +596,13 @@ class PullDetector:
 
     def reset(self):
         self.baseline, self.since, self.level, self.strongest = None, None, 0.0, ""
+        self.peak, self.peak_key = 0.0, ""
+
+    def take_peak(self):
+        """Strongest level (and its signal) since the last call, for the once-a-second log line."""
+        peak, key = self.peak, self.peak_key
+        self.peak, self.peak_key = 0.0, ""
+        return peak, key
 
     def update(self, signals, now):
         """Returns (pulling, confirmed): pulling = over threshold now, confirmed = for hold_s seconds."""
@@ -602,6 +612,8 @@ class PullDetector:
         ratios = {k: abs(signals[k] - self.baseline[k]) / self.thresholds[k.split(":")[0]] for k in signals}
         self.strongest = max(ratios, key=ratios.get)
         self.level = ratios[self.strongest]
+        if self.level > self.peak:
+            self.peak, self.peak_key = self.level, self.strongest
         if self.level > 1.0:
             if self.since is None:
                 self.since = now
@@ -924,8 +936,9 @@ def run(args):
                 pose = f" pan={pan_goal:.1f}" if robot else ""
                 if hik:
                     pose += f" height={(z_goal - hik.z0) * 100:+.1f}cm tilt={tilt_offset:+.1f}"
-                if pull:
-                    pose += f" pull={pull.level:.2f}"
+                if pull and held:
+                    peak, key = pull.take_peak()
+                    pose += f" pull_peak={peak:.2f}" + (f"({key})" if peak > 0.3 else "")
                 if robot and not held:
                     pose += " RELEASED (press g+ENTER or the Grip button)"
                 log.info(f"camera {cam_fps:4.1f} fps, processed {fps:4.1f} fps | {len(boxes)} detections | err x={ex:+.2f} y={ey:+.2f}{pose}")
@@ -971,20 +984,20 @@ def main():
                    help="while you hold the phone: find which way opens the gripper, and show pull loads")
     p.add_argument("--gripper-open-sign", type=float, choices=[1.0, -1.0], default=1.0,
                    help="direction that opens the gripper (+1 measured on this arm with --test-gripper)")
-    p.add_argument("--squeeze", type=float, default=6.0,
+    p.add_argument("--squeeze", type=float, default=8.0,
                    help="on start, close the gripper up to this much past where it is so it grips firmly (0 = off)")
-    p.add_argument("--grip-torque", type=float, default=20.0,
+    p.add_argument("--grip-torque", type=float, default=35.0,
                    help="max gripper force while tracking, %% of the motor's max (LeRobot default is 50)")
-    p.add_argument("--contact-load", type=float, default=80.0,
+    p.add_argument("--contact-load", type=float, default=200.0,
                    help="stop squeezing once the gripper feels this much push-back (of 1000)")
     p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
     p.add_argument("--release-on-pull", action=argparse.BooleanOptionalAction, default=True,
                    help="let go of the phone when someone close by pulls it (on by default)")
-    p.add_argument("--pull-threshold", type=float, default=150.0,
+    p.add_argument("--pull-threshold", type=float, default=100.0,
                    help="wrist/gripper servo load change (of 1000) that counts as a pull")
-    p.add_argument("--pull-deg", type=float, default=5.0,
+    p.add_argument("--pull-deg", type=float, default=3.5,
                    help="degrees a shoulder/elbow/wrist joint must be pushed out of position to count as a pull")
-    p.add_argument("--pull-time", type=float, default=0.4, help="seconds the pull must last (arm holds still)")
+    p.add_argument("--pull-time", type=float, default=0.3, help="seconds the pull must last (arm holds still)")
     p.add_argument("--max-jump", type=float, default=0.25,
                    help="ignore detections farther than this (fraction of frame width) from the current person")
     p.add_argument("--tilt", action="store_true", help="also tilt up/down with wrist_flex")
