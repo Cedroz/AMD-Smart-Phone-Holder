@@ -20,6 +20,7 @@ import glob
 import http.server
 import logging
 import os
+import queue
 import signal
 import socketserver
 import sys
@@ -39,6 +40,9 @@ YOLO_MODEL = os.path.join(MODELS_DIR, "yolov8n_320.onnx")
 FACE_MODEL = os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx")
 PAN = "shoulder_pan"
 TILT = "wrist_flex"
+GRIP = "gripper"
+# Joints that feel it when someone grabs and tugs the phone.
+PULL_JOINTS = ["wrist_flex", "wrist_roll", "gripper"]
 ARM_JOINTS = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"]
 # SO-101 model shipped with the LeRobot move_to example on the arm; needs `placo` (installed in the lerobot env).
 DEFAULT_URDF = os.path.expanduser("~/lerobot/examples/so101_move_to/SO101/so101_new_calib.urdf")
@@ -262,10 +266,23 @@ def pick_target(boxes, prev, max_jump):
 # --------------------------------------------------------------------------- preview server
 
 
-class Preview:
-    """Serves the annotated camera feed as MJPEG at http://<host>:<port>/"""
+PREVIEW_PAGE = b"""<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phone tracker</title><style>
+body{margin:0;background:#111;color:#eee;font-family:system-ui,sans-serif;text-align:center}
+img{max-width:100%;display:block;margin:0 auto}
+button{font-size:1.2em;padding:.7em 1.6em;margin:.8em .4em;border:0;border-radius:.5em;cursor:pointer}
+#rel{background:#e5534b;color:#fff}#grip{background:#46954a;color:#fff}#msg{min-height:1.4em}
+</style></head><body><img src="/stream">
+<button id="rel" onclick="send('release')">Release phone</button>
+<button id="grip" onclick="send('grip')">Grip + resume</button><div id="msg"></div>
+<script>function send(c){fetch('/'+c,{method:'POST'}).then(r=>r.text()).then(t=>msg.textContent=t)
+.catch(()=>msg.textContent='Could not reach the tracker')}</script></body></html>"""
 
-    def __init__(self, port):
+
+class Preview:
+    """Serves a page at http://<host>:<port>/ with the annotated camera feed and Release/Grip buttons."""
+
+    def __init__(self, port, on_command):
         self.jpeg = None
         self.version = 0
         self.cond = threading.Condition()
@@ -275,7 +292,26 @@ class Preview:
             def log_message(self, *args):
                 pass
 
+            def do_POST(self):
+                cmd = self.path.strip("/")
+                if cmd in ("release", "grip"):
+                    on_command(cmd)
+                    body = f"{cmd} requested".encode()
+                    self.send_response(200)
+                else:
+                    body = b"unknown command"
+                    self.send_response(404)
+                self.send_header("Content-Type", "text/plain")
+                self.end_headers()
+                self.wfile.write(body)
+
             def do_GET(self):
+                if self.path != "/stream":
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html")
+                    self.end_headers()
+                    self.wfile.write(PREVIEW_PAGE)
+                    return
                 self.send_response(200)
                 self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
                 self.end_headers()
@@ -376,6 +412,17 @@ def connect_arm(port):
             time.sleep(0.5)
 
 
+def disconnect_arm(robot, args):
+    """Disconnect, leaving the arm holding its pose but the gripper motor off so it can be opened by hand."""
+    if not args.keep_grip:
+        try:
+            robot.bus.disable_torque(GRIP, num_retry=3)
+            log.info("Gripper motor off: you can open it by hand (use --keep-grip to keep it clamped)")
+        except ConnectionError as e:
+            log.warning(f"Couldn't switch the gripper off ({e})")
+    robot.disconnect()
+
+
 def read_joints(robot):
     return {k.removesuffix(".pos"): v for k, v in robot.get_observation().items() if k.endswith(".pos")}
 
@@ -450,6 +497,110 @@ def plane_action(q, tilt_offset=0.0):
         "elbow_flex.pos": float(q[2]),
         f"{TILT}.pos": float(q[3] + tilt_offset),
     }
+
+
+def move_gripper(robot, start, end, seconds=1.0, steps=20):
+    for s in range(1, steps + 1):
+        robot.send_action({f"{GRIP}.pos": float(start + (end - start) * s / steps)})
+        time.sleep(seconds / steps)
+
+
+def gentle_squeeze(robot, args, start):
+    """Close the gripper a little past where it is so it actually presses on the phone, gently.
+
+    Safety layers: the gripper's live torque limit is lowered to --grip-torque % first (and nothing
+    happens if that can't be confirmed), it closes in small slow steps, and it stops at the first
+    sign of the phone pushing back. Returns the position it ends up holding.
+    """
+    limit = int(args.grip_torque * 10)  # register is 0-1000
+    try:
+        robot.bus.write("Torque_Limit", GRIP, limit, num_retry=3)
+        confirmed = robot.bus.read("Torque_Limit", GRIP, num_retry=3)
+    except ConnectionError as e:
+        log.warning(f"Couldn't set the gripper force limit ({e}); not squeezing")
+        return start
+    if confirmed != limit:
+        log.warning(f"Gripper force limit reads {confirmed}, expected {limit}; not squeezing")
+        return start
+
+    loads = read_loads(robot)
+    base = loads[GRIP] if loads else None
+    steps = 30
+    pos = start
+    for i in range(1, steps + 1):
+        pos = start - args.gripper_open_sign * args.squeeze * i / steps
+        robot.send_action({f"{GRIP}.pos": float(pos)})
+        time.sleep(1.5 / steps)
+        loads = read_loads(robot)
+        if base is not None and loads and abs(loads[GRIP] - base) > args.contact_load:
+            log.info(f"Gripper felt the phone after {abs(pos - start):.1f}; holding there")
+            break
+    log.info(f"Gripper holding the phone at {pos:.1f} with force capped at {args.grip_torque:g}%")
+    return pos
+
+
+def read_loads(robot):
+    """Servo load per joint, -1000..1000 (tenths of a percent of max torque). None on a bus glitch."""
+    try:
+        return robot.bus.sync_read("Present_Load", PULL_JOINTS, num_retry=2)
+    except ConnectionError:
+        return None
+
+
+class PullDetector:
+    """Feels someone gripping and tugging the phone: a sustained jump in wrist/gripper servo load.
+
+    The load from gravity and from the arm's own motion is tracked as a slowly adapting baseline;
+    only a deviation above `threshold` that lasts `hold_s` seconds counts as a pull.
+    """
+
+    def __init__(self, threshold, hold_s):
+        self.threshold, self.hold_s = threshold, hold_s
+        self.reset()
+
+    def reset(self):
+        self.baseline, self.since, self.deviation = None, None, 0.0
+
+    def update(self, loads, now):
+        """Returns (pulling, confirmed): pulling = over threshold now, confirmed = for long enough."""
+        if self.baseline is None:
+            self.baseline = {j: float(v) for j, v in loads.items()}
+            return False, False
+        self.deviation = max(abs(loads[j] - self.baseline[j]) for j in loads)
+        if self.deviation > self.threshold:
+            if self.since is None:
+                self.since = now
+            return True, now - self.since >= self.hold_s
+        self.since = None
+        for j in loads:
+            self.baseline[j] += 0.05 * (loads[j] - self.baseline[j])
+        return False, False
+
+
+def test_gripper(robot, args, amount=10.0):
+    """Find which way opens the gripper, safely: the person holds the phone the whole time."""
+    start = read_joints(robot)[GRIP]
+    print(f"{GRIP} is at {start:.1f}.")
+    input("HOLD THE PHONE FIRMLY with your hand, then press ENTER. The gripper will move a little...")
+    move_gripper(robot, start, start + amount)
+    input("Did the gripper LOOSEN (open) or SQUEEZE (close)? Keep holding; press ENTER to return.")
+    move_gripper(robot, start + amount, start)
+    print("If it LOOSENED, use --gripper-open-sign 1. If it SQUEEZED, use --gripper-open-sign -1.\n")
+    print("Now TUG THE PHONE FIRMLY a few times, like you're taking it out (8 s). Watch both columns...")
+    base = read_loads(robot)
+    base_pos = robot.bus.sync_read("Present_Position", PULL_JOINTS, num_retry=2)
+    t_end = time.time() + 8
+    while time.time() < t_end:
+        loads = read_loads(robot)
+        try:
+            pos = robot.bus.sync_read("Present_Position", PULL_JOINTS, num_retry=2)
+        except ConnectionError:
+            pos = None
+        if loads and base and pos:
+            print("  force: " + " ".join(f"{j}={loads[j] - base[j]:+5.0f}" for j in PULL_JOINTS)
+                  + "  | pushed by: " + " ".join(f"{j}={pos[j] - base_pos[j]:+5.1f}" for j in PULL_JOINTS))
+        time.sleep(0.25)
+    print("Send these numbers: they show whether force or position works better for detecting a tug.")
 
 
 def check_ik(robot, args):
@@ -530,7 +681,8 @@ def run(args):
     stop = threading.Event()
     signal.signal(signal.SIGINT, lambda *_: stop.set())
 
-    one_shot = args.test_pan or args.test_tilt or args.check_ik or args.test_height or args.raise_cm
+    one_shot = (args.test_pan or args.test_tilt or args.check_ik or args.test_height or args.raise_cm
+                or args.test_gripper)
     cam = None if one_shot else Camera(args.camera, exposure=args.exposure, flip=args.flip)
 
     robot = None
@@ -538,13 +690,13 @@ def run(args):
         port = args.port or (FOLLOWER_PORT if os.path.exists(FOLLOWER_PORT) else find_follower_port())
         robot = connect_arm(port)
         tests = {"test_pan": test_pan, "test_tilt": test_tilt, "check_ik": check_ik, "test_height": test_height,
-                 "raise_cm": raise_arm}
+                 "raise_cm": raise_arm, "test_gripper": test_gripper}
         for name, fn in tests.items():
             if getattr(args, name):
                 try:
                     fn(robot) if name in ("test_pan", "test_tilt") else fn(robot, args)
                 finally:
-                    robot.disconnect()
+                    disconnect_arm(robot, args)
                 return
 
     have_models = os.path.exists(YOLO_MODEL) and os.path.exists(FACE_MODEL)
@@ -557,7 +709,15 @@ def run(args):
     else:
         detector = PersonDetector()
         log.info("Detector: OpenCV Haar/HOG (models not found in tracker/models/)")
-    preview = Preview(args.preview_port) if args.preview_port else None
+    commands = queue.Queue()  # "release" / "grip" from the preview page buttons or the terminal
+    preview = Preview(args.preview_port, commands.put) if args.preview_port else None
+    if sys.stdin.isatty():
+        def read_terminal():
+            for line in sys.stdin:
+                key = line.strip().lower()
+                if key in ("r", "g"):
+                    commands.put("release" if key == "r" else "grip")
+        threading.Thread(target=read_terminal, daemon=True).start()
 
     pan_goal = tilt_goal = pan_home = tilt_home = None
     hik = None
@@ -573,6 +733,38 @@ def run(args):
             z_goal = hik.z0
             log.info(f"Height mode: tip at {hik.z0 * 100:.1f} cm, range "
                      f"-{args.height_down * 100:.0f}/+{args.height_up * 100:.0f} cm")
+
+    held = True  # is the gripper holding the phone?
+    grip_home = None
+    pull = None
+    near_seen = 0.0  # last time a person was close enough to be the one grabbing the phone
+    pull_warned = False
+    if robot:
+        grip_home = read_joints(robot)[GRIP]
+        if args.gripper_open_sign and args.squeeze > 0:
+            grip_home = gentle_squeeze(robot, args, grip_home)
+        if args.gripper_open_sign:
+            log.info(f"Gripper: holding at {grip_home:.1f}; release: 'r'+ENTER or the page button, grip: 'g'+ENTER")
+            if args.release_on_pull:
+                pull = PullDetector(args.pull_threshold, args.pull_time)
+                log.info(f"Release on pull: ON (threshold {args.pull_threshold:g}, {args.pull_time:g} s)")
+        elif args.release_on_pull:
+            log.warning("--release-on-pull ignored: run --test-gripper and pass --gripper-open-sign first")
+
+    def release(reason):
+        nonlocal held, pull_warned
+        log.info(f"Releasing phone ({reason})")
+        move_gripper(robot, grip_home, grip_home + args.gripper_open_sign * args.release_amount)
+        held, pull_warned = False, False
+
+    def grip():
+        nonlocal held
+        log.info("Gripping phone; tracking resumes in 1 s")
+        move_gripper(robot, grip_home + args.gripper_open_sign * args.release_amount, grip_home, seconds=1.5)
+        time.sleep(1.0)
+        if pull:
+            pull.reset()
+        held = True
 
     smoothed = None
     last_seen = 0.0
@@ -605,7 +797,37 @@ def run(args):
                 ex = (smoothed[0] - w / 2) / (w / 2)
                 ey = (smoothed[1] - h / 2) / (h / 2)
 
-            if robot and target is not None:
+            now = time.time()
+            if target is not None:
+                tw, th = target[2], target[3]
+                if (target[4] == "face" and tw > 0.15 * w) or (target[4] != "face" and th > 0.6 * h):
+                    near_seen = now
+
+            freeze = False
+            if robot and args.gripper_open_sign:
+                try:
+                    cmd = commands.get_nowait()
+                except queue.Empty:
+                    cmd = None
+                if cmd == "release" and held:
+                    release("button")
+                elif cmd == "grip" and not held:
+                    grip()
+                if held and pull:
+                    loads = read_loads(robot)
+                    if loads:
+                        pulling, confirmed = pull.update(loads, now)
+                        freeze = pulling  # hold still while checking, so our own motion isn't mistaken for a pull
+                        if confirmed and now - near_seen < 3.0:
+                            release("pulled by hand")
+                        elif confirmed and not pull_warned:
+                            log.warning("Felt a pull but nobody is close to the phone; not releasing")
+                            pull_warned = True
+            elif robot and not commands.empty():
+                commands.get_nowait()
+                log.warning("Release/grip needs --gripper-open-sign (run --test-gripper first)")
+
+            if robot and target is not None and held and not freeze:
                 action = {}
                 if abs(ex) > args.deadband:
                     step = args.pan_sign * args.gain * ex * args.hfov / 2
@@ -649,17 +871,21 @@ def run(args):
                 pose = f" pan={pan_goal:.1f}" if robot else ""
                 if hik:
                     pose += f" height={(z_goal - hik.z0) * 100:+.1f}cm tilt={tilt_offset:+.1f}"
+                if pull:
+                    pose += f" load_change={pull.deviation:.0f}"
+                if robot and not held:
+                    pose += " RELEASED (press g+ENTER or the Grip button)"
                 log.info(f"camera {cam_fps:4.1f} fps, processed {fps:4.1f} fps | {len(boxes)} detections | err x={ex:+.2f} y={ey:+.2f}{pose}")
 
             if preview:
-                mode = "DRY RUN" if not robot else "TRACKING"
+                mode = "DRY RUN" if not robot else ("TRACKING" if held else "RELEASED")
                 seen = target[4] if target is not None else "searching"
                 status = f"{mode} | {seen} | ex={ex:+.2f} | cam {cam_fps:.0f} / proc {fps:.0f} fps"
                 preview.show(annotate(frame, boxes, target, smoothed, args.deadband, status))
     finally:
         cam.close()
         if robot:
-            robot.disconnect()  # torque stays on, so the arm holds its last pose
+            disconnect_arm(robot, args)  # arm joints stay on and hold the pose; gripper goes limp
         log.info("Stopped.")
 
 
@@ -686,6 +912,24 @@ def main():
     p.add_argument("--height-down", type=float, default=0.10, help="max metres the phone may drop from the start pose")
     p.add_argument("--height-rate", type=float, default=0.0005,
                    help="metres per frame per degree of wrist tilt (how eagerly the phone moves to eye level)")
+    p.add_argument("--keep-grip", action="store_true",
+                   help="leave the gripper clamped when the program exits (default: gripper motor turns off)")
+    p.add_argument("--test-gripper", action="store_true",
+                   help="while you hold the phone: find which way opens the gripper, and show pull loads")
+    p.add_argument("--gripper-open-sign", type=float, choices=[1.0, -1.0], default=1.0,
+                   help="direction that opens the gripper (+1 measured on this arm with --test-gripper)")
+    p.add_argument("--squeeze", type=float, default=6.0,
+                   help="on start, close the gripper up to this much past where it is so it grips firmly (0 = off)")
+    p.add_argument("--grip-torque", type=float, default=20.0,
+                   help="max gripper force while tracking, %% of the motor's max (LeRobot default is 50)")
+    p.add_argument("--contact-load", type=float, default=80.0,
+                   help="stop squeezing once the gripper feels this much push-back (of 1000)")
+    p.add_argument("--release-amount", type=float, default=30.0, help="how far to open the gripper (0-100 scale)")
+    p.add_argument("--release-on-pull", action="store_true",
+                   help="let go of the phone when someone close by grabs and tugs it")
+    p.add_argument("--pull-threshold", type=float, default=250.0,
+                   help="servo load change (of 1000) that counts as a tug")
+    p.add_argument("--pull-time", type=float, default=0.5, help="seconds the tug must last")
     p.add_argument("--max-jump", type=float, default=0.25,
                    help="ignore detections farther than this (fraction of frame width) from the current person")
     p.add_argument("--tilt", action="store_true", help="also tilt up/down with wrist_flex")
